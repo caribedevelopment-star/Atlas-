@@ -1,0 +1,68 @@
+:root {
+  color-scheme: dark;
+  --text: #f4eee5;
+  --muted: rgba(244,238,229,.62);
+  --line: rgba(255,255,255,.15);
+  --accent: #f4b362;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #050403; }
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text); overscroll-behavior: none;
+  text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; }
+#experience, #world { position: fixed; inset: 0; width: 100%; height: 100%; }
+#world { display: block; touch-action: none; background: radial-gradient(circle at 50% 20%, #21110b 0%, #090504 50%, #050403 100%); }
+.hidden { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+
+.grain, .vignette { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+.grain {
+  opacity: .065; mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+}
+.vignette { box-shadow: inset 0 0 18vw 6vw rgba(0,0,0,.82); }
+
+.screen {
+  position: fixed; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(2,2,2,.97);
+  transition: opacity 1.45s cubic-bezier(.2,.7,.2,1), visibility 1.45s;
+}
+.screen-inner { width: min(760px, 90vw); text-align: center; padding: 28px; }
+.kicker {
+  font-size: 10px; letter-spacing: .52em; line-height: 1.5; opacity: .62; margin-bottom: 18px;
+  font-weight: 700; text-transform: uppercase;
+}
+h1, h2 {
+  margin: 0; font-weight: 900; letter-spacing: -.07em;
+  font-size: clamp(56px, 10vw, 134px); line-height: .88; text-transform: uppercase;
+}
+.screen p { margin: 18px auto 28px; max-width: 620px; font-size: 14px; line-height: 1.8; color: var(--muted); }
+.subnote { font-size: 12px; line-height: 1.6; color: rgba(255,255,255,.45); margin-top: 16px; }
+#enter {
+  border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.04); color: var(--text);
+  padding: 14px 30px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .34em; cursor: pointer;
+  transition: background .25s, border-color .25s, transform .25s, box-shadow .25s;
+  box-shadow: 0 0 0 0 rgba(244,179,98,.0);
+}
+#enter:hover { border-color: rgba(244,179,98,.8); background: rgba(255,255,255,.08); transform: translateY(-1px); box-shadow: 0 0 24px rgba(244,179,98,.12); }
+
+.hud { position: fixed; inset: 0; z-index: 7; pointer-events: none; transition: opacity 1s; }
+.brand {
+  position: absolute; top: max(22px, env(safe-area-inset-top)); left: max(22px, env(safe-area-inset-left));
+  font-size: 13px; font-weight: 900; letter-spacing: .18em; opacity: .9;
+}
+.proximity { position: absolute; top: max(28px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: 120px; height: 2px; background: rgba(255,255,255,.11); overflow: hidden; }
+.proximity span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, rgba(244,179,98,.75), rgba(255,109,30,.95)); transform: scaleX(0); transform-origin: left; }
+.hint { position: absolute; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translateX(-50%); font-size: 10px; font-weight: 600; letter-spacing: .24em; opacity: .55; white-space: nowrap; transition: opacity 1.1s; }
+.hint.faded { opacity: 0; }
+
+.mobile-pad { position: fixed; z-index: 9; left: max(18px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: 118px; height: 118px; display: none; }
+.mobile-pad button { position: absolute; width: 39px; height: 39px; border-radius: 50%; border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.5); background: rgba(0,0,0,.26); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+.mobile-pad .up { left: 39px; top: 0; }.mobile-pad .down { left:39px; bottom:0; }.mobile-pad .left { left:0; top:39px; }.mobile-pad .right { right:0; top:39px; }
+.fallback { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: #050403; font-size: 12px; opacity: .7; }
+
+@media (pointer: coarse) {
+  .mobile-pad:not(.hidden) { display: block; }
+  .hint { bottom: max(154px, calc(env(safe-area-inset-bottom) + 138px)); }
+}
