@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#050403" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Al.Kim.ia — Memory 01</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.179.1/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <main id="experience">
+    <canvas id="world" aria-label="Al.Kim.ia concierto interactivo"></canvas>
+    <div class="grain"></div>
+    <div class="vignette"></div>
+
+    <section id="intro" class="screen">
+      <div class="screen-inner">
+        <div class="kicker">AL.KIM.IA · MEMORY 01</div>
+        <h1>THE ENCOUNTER</h1>
+        <p>El WiZink traducido a memoria: oscuridad, esfera, multitud y dos presencias de materia que todavía no saben que van a encontrarse.</p>
+        <button id="enter">ENTER</button>
+        <div class="subnote">Si añades tu propio archivo en <strong>/audio/rawayana.mp3</strong>, esta memoria reproducirá tu tema de referencia en lugar del ambiente sintético.</div>
+      </div>
+    </section>
+
+    <section id="ending" class="screen hidden">
+      <div class="screen-inner">
+        <div class="kicker">AL.KIM.IA</div>
+        <h2>YOU FOUND HER.</h2>
+        <p>La siguiente memoria será la habitación.</p>
+      </div>
+    </section>
+
+    <div id="hud" class="hud hidden">
+      <div class="brand">AL.KIM.IA</div>
+      <div class="proximity"><span id="proximityBar"></span></div>
+      <div id="hint" class="hint">W A S D · AVANZA HACIA LA PRESENCIA CÁLIDA</div>
+    </div>
+
+    <div id="mobilePad" class="mobile-pad hidden" aria-label="Controles de movimiento">
+      <button data-move="forward" class="up" aria-label="forward">↑</button>
+      <button data-move="back" class="down" aria-label="back">↓</button>
+      <button data-move="left" class="left" aria-label="left">←</button>
+      <button data-move="right" class="right" aria-label="right">→</button>
+    </div>
+
+    <div id="fallback" class="fallback hidden">Esta memoria necesita WebGL para abrirse.</div>
+  </main>
+  <script type="module" src="/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  </script>
+</body>
+</html>
