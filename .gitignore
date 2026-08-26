@@ -1,0 +1,13 @@
+# local / OS
+.DS_Store
+Thumbs.db
+
+# optional private audio
+/audio/*.mp3
+/audio/*.wav
+/audio/*.m4a
+!/audio/README.md
+
+# tooling
+node_modules/
+.vercel/
