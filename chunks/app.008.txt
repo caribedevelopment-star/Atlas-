@@ -1,81 +1,109 @@
-on.x, -0.55, 0.02);
-  meadowKim.group.position.x = THREE.MathUtils.lerp(meadowKim.group.position.x, 0.55, 0.02);
-  meadowAle.group.position.z = THREE.MathUtils.lerp(meadowAle.group.position.z, -26, 0.02);
-  meadowKim.group.position.z = THREE.MathUtils.lerp(meadowKim.group.position.z, -26.3, 0.02);
-  meadowAle.group.position.y = ascendMix * 12.5;
-  meadowKim.group.position.y = ascendMix * 12.9;
-  meadowAle.update(t, 0.48 + ascendMix * 0.4, ascendMix);
-  meadowKim.update(t, 0.62 + ascendMix * 0.35, ascendMix);
-  updateInstancedRise(lavender, lavenderData, ascendMix * 8.2, 0.05, t);
-  updateInstancedRise(grass, grassData, ascendMix * 2.4, 0.02, t);
-  meadowWarm.material.opacity = 0.25 + ascendMix * 0.48;
-  meadowWarm.position.y = Math.sin(t * 0.24) * 0.2 + ascendMix * 2.5;
-  scene.background.lerp(new THREE.Color('#f4e1cf'), 0.03);
-  scene.fog.color.lerp(new THREE.Color('#f2dfc9'), 0.03);
-  scene.fog.density = 0.013 - ascendMix * 0.006;
-  meadowSun.intensity = 2.4 + ascendMix * 2.2;
-  meadowHemi.intensity = 1.4 + ascendMix * 0.9;
-  orbLight.intensity = 0;
-  if (phaseTime() > 1.2 && currentHint !== '') setHint('');
+Player.group.position.z = THREE.MathUtils.clamp(currentPlayer.group.position.z, bounds.z0, bounds.z1);
 }
 
-function updateCamera(t) {
-  if (!started) {
-    camera.position.set(Math.sin(t * 0.06) * 3.5, 13, 26);
-    camera.lookAt(0, 5.5, -14);
-    return;
-  }
-  if (phase === 'tunnel') return;
-
-  if (phase === 'concert_touch') {
-    const m = smoother(phaseTime() / 2.6);
-    const mid = concertAle.group.position.clone().lerp(concertKim.group.position, 0.5);
-    desired.set(mid.x + 3.6, 3.8, mid.z + 5.6);
-    target.set(mid.x, 1.6, mid.z);
-    camera.position.lerp(desired, 0.065); camera.lookAt(target); return;
-  }
-
-  if (phase === 'ascension') {
-    const mid = meadowAle.group.position.clone().lerp(meadowKim.group.position, 0.5);
-    desired.set(mid.x + 6.2 - ascendMix * 2.3, 5.0 + ascendMix * 7.4, mid.z + 10.4 - ascendMix * 6.0);
-    target.set(mid.x, 2.4 + ascendMix * 8.0, mid.z - 1.2);
-    camera.position.lerp(desired, 0.045);
-    camera.lookAt(target);
-    return;
-  }
-
-  const player = currentPlayer; if (!player) return;
-  const dist = phase === 'room' ? 6.4 : phase === 'meadow' ? 7.8 : 7.4;
-  const height = phase === 'room' ? 3.35 : 3.8;
-  desired.set(
-    player.group.position.x + Math.sin(cameraYaw) * dist,
-    player.group.position.y + height + Math.sin(cameraPitch) * 1.5,
-    player.group.position.z + Math.cos(cameraYaw) * dist,
-  );
-  target.set(player.group.position.x, player.group.position.y + 1.35, player.group.position.z);
-  camera.position.lerp(desired, 0.08);
-  camera.lookAt(target);
+// ---------- SCENE FLOW ----------
+async function startRoom() {
+  if (transitioning) return;
+  transitioning = true;
+  fadeToBlack(true); audioSystem?.fade?.(.13); await wait(760);
+  concertRoot.visible=false; roomRoot.visible=true; tunnelRoot.visible=false; meadowRoot.visible=false;
+  scene.background.set('#070605'); scene.fog=new THREE.FogExp2('#0a0807',.028);
+  currentPlayer=roomAle; currentKim=roomKim; roomAle.group.position.set(-.9,0,9.4); roomKim.group.position.set(1.6,0,7.2);
+  cameraYaw=0; cameraPitch=.18; proximity=0; proximityBar.style.transform='scaleX(0)'; setPhase('room');
+  fadeToBlack(false); showChapter('MEMORY 02','THE ROOM',2200); setHint('EL PORTAL YA ESTÁ ABIERTO');
+  await wait(480); transitioning=false;
 }
 
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.04), t = clock.elapsedTime;
-  scenePulse = Math.sin(t * 0.9) * 0.5 + 0.5;
-  if (started) {
-    if (phase === 'concert' || phase === 'concert_touch') updateConcert(t, dt);
-    else if (phase === 'room') updateRoom(t, dt);
-    else if (phase === 'tunnel') updateTunnel(t);
-    else if (phase === 'meadow') updateMeadow(t, dt);
-    else if (phase === 'ascension') updateAscension(t);
-  }
-  updateCamera(t);
-  renderer.render(scene, camera);
+function beginPortalCinematic(){
+  if(phase!=='room'||transitioning)return;
+  portalCamStart.copy(camera.position);
+  portalLookStart.copy(roomAle.group.position).add(new THREE.Vector3(0,1.35,0));
+  setPhase('portal_cinematic'); setHint('');
 }
-animate();
 
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
-  renderer.setSize(innerWidth, innerHeight);
+async function startTunnel() {
+  if (transitioning) return;
+  transitioning=true;
+  veil.classList.add('portal'); fadeToBlack(true); await wait(280);
+  roomRoot.visible=false; tunnelRoot.visible=true; scene.background.set('#020202'); scene.fog=null; setPhase('tunnel');
+  camera.fov=56; camera.updateProjectionMatrix();
+  fadeToBlack(false); setTimeout(()=>veil.classList.remove('portal'),420);
+  await wait(3450);
+  veil.classList.add('portal'); fadeToBlack(true); await wait(320);
+  tunnelRoot.visible=false; meadowRoot.visible=true; scene.background.set('#b9c2c8'); scene.fog=new THREE.FogExp2('#aeb8bf',.014);
+  currentPlayer=meadowAle; currentKim=meadowKim; meadowAle.group.position.set(-1.2,0,14.8); meadowKim.group.position.set(1.3,0,12.6);
+  cameraYaw=0; cameraPitch=.2; worldProgress=0; ascendMix=0; setPhase('meadow'); proximityBar.style.transform='scaleX(0)';
+  camera.fov=50; camera.updateProjectionMatrix(); fadeToBlack(false); setTimeout(()=>veil.classList.remove('portal'),420);
+  hud.classList.remove('hidden'); showChapter('MEMORY 03','THE MEADOW',2500); setHint('CAMINA CON ELLA · EL MUNDO CAMBIA A VUESTRO PASO');
+  transitioning=false;
+}
+
+function beginAscension() {
+  if (phase==='ascension'||transitioning) return;
+  setPhase('ascension'); setHint(''); hud.classList.add('hidden');
+  showChapter('MEMORY 04','THE ASCENSION',2200);
+}
+
+enterButton.addEventListener('click', async () => {
+  started = true;
+  intro.classList.add('hidden'); hud.classList.remove('hidden');
+  currentPlayer = concertAle; currentKim = concertKim; setPhase('concert');
+  showChapter('MEMORY 01', 'THE ENCOUNTER', 1800);
+  setHint('ATRAVIESA LA MULTITUD · ENCUÉNTRALA');
+  audioSystem = await createAudio();
 });
+
+// ---------- UPDATES ----------
+function updateConcert(t, dt) {
+  movePlayer(dt, { x0: -8, x1: 8, z0: -0.5, z1: 15 });
+  const d = concertAle.group.position.distanceTo(concertKim.group.position);
+  proximity = smooth(1 - clamp01((d - 1.8) / 10.5));
+  proximityBar.style.transform = `scaleX(${proximity})`;
+  audioSystem?.set?.(proximity);
+
+  const touchMix = phase === 'concert_touch' ? smoother(phaseTime() / 2.9) : 0;
+  concertAle.update(t, proximity * 0.4 + touchMix * 0.35, touchMix);
+  concertKim.update(t, proximity * 0.95 + touchMix * 0.2, touchMix);
+  updateBond(t, touchMix);
+  updateCrowd(t, proximity * 0.9 + touchMix * 0.4);
+
+  crowdMat.color.lerp(new THREE.Color(proximity > 0.62 ? '#040404' : '#070606'), 0.04);
+  intimateLight.position.lerp(concertAle.group.position.clone().lerp(concertKim.group.position, 0.5).add(new THREE.Vector3(0, 2.2, 0)), 0.07);
+  intimateLight.intensity = proximity * 42 + touchMix * 25;
+
+  concertDust.rotation.y = t * 0.012;
+  concertDust.position.y = Math.sin(t * 0.14) * 0.24;
+  stageBars.forEach((b, i) => { b.material.opacity = 0.28 + Math.max(0, Math.sin(t * 6.0 + i * 0.4)) * 0.7; });
+  concertBeams.forEach((b, i) => { b.rotation.y = Math.sin(t * 0.46 + i * 0.2) * 0.55; b.material.opacity = 0.02 + Math.max(0, Math.sin(t * 3.8 + i)) * 0.038; });
+  const orbPulse = 1 + Math.sin(t * 1.8) * 0.026 + proximity * 0.04;
+  orb.scale.setScalar(orbPulse); orbLight.intensity = 1030 + Math.max(0, Math.sin(t * 2.1)) * 280 + proximity * 150;
+  orbHalos.forEach((h, i) => h.scale.setScalar(1 + Math.sin(t * (0.44 + i * 0.06) + i) * (0.05 + i * 0.015)));
+
+  if (phase === 'concert' && d < 2.3) {
+    setPhase('concert_touch');
+    setHint('');
+  }
+  if (phase === 'concert_touch') {
+    const mid = concertAle.group.position.clone().lerp(concertKim.group.position, 0.5);
+    concertAle.group.position.lerp(new THREE.Vector3(mid.x - 0.9, 0, mid.z + 0.04), 0.03);
+    concertKim.group.position.lerp(new THREE.Vector3(mid.x + 0.9, 0, mid.z - 0.04), 0.03);
+    if (phaseTime() > 3.2) startRoom();
+  }
+}
+
+function updatePortalPreview(t){
+  const season=(Math.sin(t*.24)+1)*1.5;
+  pSky.material.uniforms.uTime.value=t;
+  pSky.material.uniforms.uSeason.value=season;
+  pSky.material.uniforms.uCloud.value=.52;
+  pGroundMat.color.lerp(season<.9?new THREE.Color('#8c7359'):season<1.6?new THREE.Color('#d6dadb'):season<2.45?new THREE.Color('#627a55'):new THREE.Color('#78905f'),.035);
+  pBudMat.opacity=.08+smooth((season-1.7)/1.3)*.84;
+  pStemMat.opacity=.22+smooth((season-1.4)/1.1)*.62;
+  pSun.intensity=1.25+season*.42;
+  pDust.material.opacity=.08+smooth((season-2.1)/.9)*.28;
+  if(frame%2===0){
+    for(let i=0;i<pData.length;i++){
+      const d=pData[i],w=windField(d.x,d.z,t+d.seed,.85);crowdDummy.position.set(d.x,.4,d.z);crowdDummy.rotation.set(w.z,d.rot,w.x);crowdDummy.scale.set(.7*d.s,d.s,.7*d.s);crowdDummy.updateMatrix();pStems.setMatrixAt(i,crowdDummy.matrix);
+      crowdDummy.position.set(d.x+w.x*.65,.86*d.s,d.z+w.z*.65);crowdDummy.rotation.set(w.z*.7,d.rot,w.x*.7);crowdDummy.scale.set(d.s,1.45*d.s,.86*d.s);crowdDummy.updateMatrix();pBuds.setMatrixAt(i,crowdDummy.matrix);
+    }
+    pStems.instanceMatrix.needsUpdate=pBuds.instanceMatrix.needsUpdate
