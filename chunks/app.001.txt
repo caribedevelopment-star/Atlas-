@@ -1,0 +1,155 @@
+import * as THREE from 'https://unpkg.com/three@0.179.1/build/three.module.js';
+
+const $ = (s) => document.querySelector(s);
+const canvas = $('#world');
+const intro = $('#intro');
+const enterButton = $('#enter');
+const hud = $('#hud');
+const hint = $('#hint');
+const proximityBar = $('#proximityBar');
+const fallback = $('#fallback');
+const veil = $('#transitionVeil');
+const chapter = $('#chapter');
+const chapterIndex = $('#chapterIndex');
+const chapterTitle = $('#chapterTitle');
+const joystick = $('#joystick');
+const joystickKnob = $('.joystick-knob');
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+} catch (error) {
+  console.error(error);
+  fallback.classList.remove('hidden');
+  throw error;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#050403');
+scene.fog = new THREE.FogExp2('#0a0706', 0.022);
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 240);
+
+const clock = new THREE.Clock();
+const tmp = new THREE.Vector3();
+const desired = new THREE.Vector3();
+const target = new THREE.Vector3();
+const camForward = new THREE.Vector3();
+const camRight = new THREE.Vector3();
+const black = new THREE.Color('#050403');
+const amber = new THREE.Color('#ffad56');
+
+let started = false;
+let phase = 'idle';
+let phaseStartedAt = 0;
+let cameraYaw = 0;
+let cameraPitch = 0.18;
+let proximity = 0;
+let currentPlayer = null;
+let currentKim = null;
+let audioSystem = null;
+let transitioning = false;
+let worldProgress = 0;
+let currentHint = '';
+let scenePulse = 0;
+let ascendMix = 0;
+
+const keyboard = { forward: false, back: false, left: false, right: false };
+const mobileAxis = new THREE.Vector2();
+let joyPointer = null;
+let joyOrigin = new THREE.Vector2();
+let lookPointer = null;
+let lastLook = new THREE.Vector2();
+
+function clamp01(v) { return THREE.MathUtils.clamp(v, 0, 1); }
+function smooth(v) { v = clamp01(v); return v * v * (3 - 2 * v); }
+function smoother(v) { v = clamp01(v); return v * v * v * (v * (v * 6 - 15) + 10); }
+function setPhase(name) { phase = name; phaseStartedAt = clock.elapsedTime; }
+function phaseTime() { return clock.elapsedTime - phaseStartedAt; }
+function setHint(text) { currentHint = text; hint.textContent = text; }
+function showChapter(index, title, duration = 1800) {
+  chapterIndex.textContent = index;
+  chapterTitle.textContent = title;
+  chapter.classList.remove('hidden');
+  setTimeout(() => chapter.classList.add('hidden'), duration);
+}
+function fadeToBlack(on = true) { veil.classList.toggle('on', on); }
+function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+scene.add(new THREE.AmbientLight('#735845', 0.34));
+const globalLight = new THREE.DirectionalLight('#ffb46a', 0.7);
+globalLight.position.set(-6, 12, 6);
+scene.add(globalLight);
+const intimateLight = new THREE.PointLight('#ffb98f', 0, 18, 2);
+scene.add(intimateLight);
+
+// ---------- TEXTURES ----------
+function textTexture(text, { width = 1024, height = 256, color = '#ffb86e', bg = 'transparent', font = '900 120px Inter, Arial, sans-serif' } = {}) {
+  const c = document.createElement('canvas');
+  c.width = width; c.height = height;
+  const ctx = c.getContext('2d');
+  if (bg !== 'transparent') { ctx.fillStyle = bg; ctx.fillRect(0, 0, width, height); }
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color;
+  ctx.fillText(text, width / 2, height / 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// ---------- ROOTS ----------
+const concertRoot = new THREE.Group();
+const roomRoot = new THREE.Group();
+const tunnelRoot = new THREE.Group();
+const meadowRoot = new THREE.Group();
+scene.add(concertRoot, roomRoot, tunnelRoot, meadowRoot);
+roomRoot.visible = tunnelRoot.visible = meadowRoot.visible = false;
+
+// ---------- SHADER ----------
+const entityVertex = /* glsl */`
+  uniform float uTime;
+  uniform float uReaction;
+  varying vec3 vPos;
+  varying vec3 vNormal;
+  varying vec3 vWorld;
+
+  float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+  float noise(vec3 x){
+    vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
+    return mix(mix(mix(hash(i+vec3(0,0,0)),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);
+  }
+  void main(){
+    vPos=position;
+    vec3 p=position;
+    float n=noise(position*2.0 + vec3(uTime*.08,-uTime*.05,uTime*.06));
+    float ripple=sin((position.y+position.x*.45+position.z*.25)*2.6 + uTime*1.3)*.04;
+    float disp=(n-.5)*(.18+uReaction*.16)+ripple*(.4+uReaction*.6);
+    p += normal * disp;
+    vec4 world = modelMatrix * vec4(p,1.);
+    vWorld = world.xyz;
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * viewMatrix * world;
+  }
+`;
+
+const entityFragment = /* glsl */`
+  uniform float uTime;
+  uniform float uReaction;
+  uniform vec3 uBase;
+  uniform vec3 uCore;
+  varying vec3 vPos;
+  varying vec3 vNormal;
+  varying vec3 vWorld;
+
+  float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+  float noise(vec3 x){
+    vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
+    return mix(mix(mix(hash(i+vec3(0,0,0)),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);
+  }
