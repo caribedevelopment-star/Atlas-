@@ -1,0 +1,84 @@
+rtDust = ambientPoints(900, { x: 54, y: 16, z: 54 }, '#ff7c26', 0.045, 0.24, concertRoot);
+
+const concertAle = new Entity({ parent: concertRoot, position: [-1.4, 0, 14.2], core: '#b9c1c9', variant: 'ale', scale: 1.1 });
+const concertKim = new Entity({ parent: concertRoot, position: [1.6, 0, 2.2], core: '#d59763', variant: 'kim', scale: 1.08 });
+
+const bondGeo = new THREE.BufferGeometry();
+const bondArr = new Float32Array(52 * 3); bondGeo.setAttribute('position', new THREE.BufferAttribute(bondArr, 3));
+const bondMat = new THREE.LineBasicMaterial({ color: '#ffd2a5', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+const bond = new THREE.Line(bondGeo, bondMat); concertRoot.add(bond);
+function updateBond(t, meet = 0) {
+  const a = concertAle.handWorld(), b = concertKim.handWorld();
+  const attr = bondGeo.attributes.position;
+  for (let i = 0; i < 52; i++) {
+    const u = i / 51;
+    tmp.lerpVectors(a, b, u);
+    const env = Math.sin(u * Math.PI);
+    tmp.y += Math.sin(u * Math.PI * 5 + t * 2.5) * 0.06 * env;
+    tmp.x += Math.cos(u * Math.PI * 4 + t * 1.2) * 0.05 * env;
+    attr.setXYZ(i, tmp.x, tmp.y, tmp.z);
+  }
+  attr.needsUpdate = true;
+  bondMat.opacity = Math.max(0, (proximity - 0.52) / 0.48) * 0.52 + meet * 0.48;
+}
+
+// ---------- ROOM ----------
+const roomFloor = new THREE.Mesh(new THREE.PlaneGeometry(30, 42), new THREE.MeshStandardMaterial({ color: '#12100f', roughness: 0.88, metalness: 0.1 }));
+roomFloor.rotation.x = -Math.PI / 2; roomRoot.add(roomFloor);
+const roomCeil = new THREE.Mesh(new THREE.PlaneGeometry(30, 42), new THREE.MeshStandardMaterial({ color: '#060605', roughness: 1, side: THREE.DoubleSide }));
+roomCeil.position.y = 11.5; roomCeil.rotation.x = Math.PI / 2; roomRoot.add(roomCeil);
+for (const [x, z, ry, w] of [[-15, 0, Math.PI / 2, 42], [15, 0, Math.PI / 2, 42], [0, -16, 0, 30], [0, 16, 0, 30]]) {
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(w, 11.5), new THREE.MeshStandardMaterial({ color: '#0b0a09', roughness: 0.96, side: THREE.DoubleSide }));
+  wall.position.set(x, 5.75, z); wall.rotation.y = ry; roomRoot.add(wall);
+}
+const roomGlow = new THREE.PointLight('#f1d0aa', 18, 24, 2); roomGlow.position.set(-5, 7, 4); roomRoot.add(roomGlow);
+const roomBackLight = new THREE.PointLight('#9c7a57', 6, 20, 2); roomBackLight.position.set(0, 3, -10); roomRoot.add(roomBackLight);
+
+const portalFrame = new THREE.Group(); portalFrame.position.set(0, 0, -15.4); roomRoot.add(portalFrame);
+const portalFrameMat = new THREE.MeshStandardMaterial({ color: '#191510', roughness: 0.65 });
+const leftBar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8.5, 0.5), portalFrameMat); leftBar.position.set(-3.2, 4.25, 0); portalFrame.add(leftBar);
+const rightBar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8.5, 0.5), portalFrameMat); rightBar.position.set(3.2, 4.25, 0); portalFrame.add(rightBar);
+const topBar = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.6, 0.5), portalFrameMat); topBar.position.set(0, 8.2, 0); portalFrame.add(topBar);
+const baseBar = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.36, 0.5), portalFrameMat); baseBar.position.set(0, 0.18, 0); portalFrame.add(baseBar);
+const portalPlane = new THREE.Mesh(new THREE.PlaneGeometry(5.1, 6.9), new THREE.MeshBasicMaterial({ color: '#f3d7b1', transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending }));
+portalPlane.position.set(0, 4.1, 0.18); portalFrame.add(portalPlane);
+const portalHalo = new THREE.PointLight('#f6c58c', 54, 16, 2); portalHalo.position.set(0, 4.2, 1.8); portalFrame.add(portalHalo);
+
+const portalPreview = new THREE.Group();
+portalPreview.position.set(0, 0.05, -15.0); roomRoot.add(portalPreview);
+const previewGround = new THREE.Mesh(new THREE.PlaneGeometry(12, 24), new THREE.MeshStandardMaterial({ color: '#89735c', roughness: 1 }));
+previewGround.rotation.x = -Math.PI / 2; previewGround.position.z = -8; portalPreview.add(previewGround);
+const previewLav = new THREE.InstancedMesh(new THREE.ConeGeometry(0.05, 0.7, 5), new THREE.MeshStandardMaterial({ color: '#7b5ca0', roughness: 0.92, transparent: true, opacity: 0.0 }), 120);
+portalPreview.add(previewLav);
+for (let i = 0; i < 120; i++) {
+  crowdDummy.position.set((Math.random() - 0.5) * 5.8, 0.35, -2 - Math.random() * 10);
+  crowdDummy.rotation.y = Math.random() * 6.28;
+  crowdDummy.scale.setScalar(0.6 + Math.random() * 0.9);
+  crowdDummy.updateMatrix();
+  previewLav.setMatrixAt(i, crowdDummy.matrix);
+}
+previewLav.instanceMatrix.needsUpdate = true;
+const previewDust = ambientPoints(180, { x: 7, y: 5, z: 12 }, '#f6d7a9', 0.05, 0.22, portalPreview);
+
+const roomAle = new Entity({ parent: roomRoot, position: [-0.9, 0, 8.8], core: '#b9c1c9', variant: 'ale', scale: 1.05 });
+const roomKim = new Entity({ parent: roomRoot, position: [1.4, 0, 6.8], core: '#d59763', variant: 'kim', scale: 1.02 });
+
+// ---------- TUNNEL ----------
+const tunnelRings = [];
+for (let i = 0; i < 42; i++) {
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(2.8 + i * 0.03, 0.045, 7, 72),
+    new THREE.MeshBasicMaterial({ color: i % 3 === 0 ? '#f5d3ae' : '#bc8c63', transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  ring.position.z = -i * 2.2;
+  ring.rotation.z = i * 0.24;
+  tunnelRoot.add(ring);
+  tunnelRings.push(ring);
+}
+const tunnelParticles = ambientPoints(1400, { x: 12, y: 12, z: 120 }, '#f7d8b6', 0.035, 0.4, tunnelRoot);
+
+// ---------- MEADOW ----------
+const meadowFloorMat = new THREE.MeshStandardMaterial({ color: '#866f58', roughness: 1, metalness: 0 });
+const meadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(100, 120), meadowFloorMat);
+meadowFloor.rotation.x = -Math.PI / 2; meadowFloor.position.z = -18; meadowRoot.add(meadowFloor);
+const meadowHemi = new THREE.HemisphereLight('#ced8de', '#7b69
