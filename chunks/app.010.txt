@@ -1,0 +1,103 @@
+5&&close)beginAscension();
+}
+
+function updateAscension(t){
+  ascendMix=smoother(phaseTime()/10.5);
+  const lift=smoother((phaseTime()-2.2)/7.5);
+  const disintegrate=smoother((phaseTime()-.7)/5.0);
+  meadowAle.group.position.x=THREE.MathUtils.lerp(meadowAle.group.position.x,-.5,.018);
+  meadowKim.group.position.x=THREE.MathUtils.lerp(meadowKim.group.position.x,.5,.018);
+  meadowAle.group.position.z=THREE.MathUtils.lerp(meadowAle.group.position.z,-30,.018);
+  meadowKim.group.position.z=THREE.MathUtils.lerp(meadowKim.group.position.z,-30.25,.018);
+  meadowAle.group.position.y=lift*17;meadowKim.group.position.y=lift*17.3;
+  meadowAle.update(t,.48+ascendMix*.45,ascendMix);meadowKim.update(t,.58+ascendMix*.4,ascendMix);
+
+  if(frame%2===0)updateLavenderInstances(t,1.45,0,disintegrate);
+  lavBudMatA.opacity=(1-disintegrate)*.94;lavBudMatB.opacity=(1-disintegrate)*.9;lavBudMatC.opacity=(1-disintegrate)*.84;
+  lavStemMat.opacity=.82-disintegrate*.24;
+
+  const attr=petalGeo.attributes.position;
+  for(let i=0;i<petalBase.length;i++){
+    const b=petalBase[i];const delay=(i%37)/37*.42;const a=smoother((ascendMix-delay)/Math.max(.01,1-delay));
+    const swirl=Math.sin(t*.7+i*.17+b.x*.15)*(.3+a*1.6);const swirl2=Math.cos(t*.43+i*.11+b.z*.13)*(.2+a*1.2);
+    attr.setXYZ(i,b.x+swirl*a,b.y+a*(5+(i%19)*.42)+Math.sin(t+i*.3)*.12*a,b.z+swirl2*a);
+  }
+  attr.needsUpdate=true;petalMat.opacity=.08+ascendMix*.82;petalMat.size=.045+ascendMix*.035;
+
+  ascensionLines.forEach((l,i)=>{l.material.opacity=Math.max(0,ascendMix-.18)*(.045+(i%4)*.008);l.rotation.y=t*.018+i*.08;l.position.y=lift*2});
+  meadowWarm.material.opacity=.28+ascendMix*.5;meadowWarm.position.y=ascendMix*3.5;meadowWarm.scale.setScalar(1+ascendMix*.5);
+  meadowSky.material.uniforms.uTime.value=t;meadowSky.material.uniforms.uSeason.value=3+ascendMix;meadowSky.material.uniforms.uCloud.value=.52+ascendMix*.22;
+  scene.fog.color.lerp(new THREE.Color('#ead4bd'),.025);scene.fog.density=.012-ascendMix*.006;
+  meadowSun.intensity=2.6+ascendMix*2.8;meadowHemi.intensity=1.35+ascendMix*1.0;
+  if(phaseTime()>1.1&&currentHint!=='')setHint('');
+}
+
+function updateCamera(t){
+  if(!started){
+    camera.fov=50;camera.updateProjectionMatrix();
+    camera.position.set(Math.sin(t*.06)*3.5,13,26);camera.lookAt(0,5.5,-14);return;
+  }
+  if(phase==='tunnel')return;
+
+  if(phase==='concert_touch'){
+    const p=smoother(phaseTime()/2.8);const mid=concertAle.group.position.clone().lerp(concertKim.group.position,.5);
+    const ang=THREE.MathUtils.lerp(.7,1.55,p);
+    desired.set(mid.x+Math.cos(ang)*(4.4-p*1.3),3.7-p*.55,mid.z+Math.sin(ang)*(4.9-p*1.5));
+    target.set(mid.x,1.48,mid.z);camera.position.lerp(desired,.07);camera.fov=THREE.MathUtils.lerp(50,42,p);camera.updateProjectionMatrix();camera.lookAt(target);return;
+  }
+
+  if(phase==='portal_cinematic'){
+    const p=smoother(phaseTime()/3.85);
+    const p0=portalCamStart;
+    const p1=new THREE.Vector3(3.1,3.8,-7.6);
+    const p2=new THREE.Vector3(1.1,2.85,-12.4);
+    const p3=new THREE.Vector3(.15,2.25,-16.2);
+    const rail=new THREE.CatmullRomCurve3([p0,p1,p2,p3]);
+    camera.position.copy(rail.getPoint(p));
+    const look=portalLookStart.clone().lerp(new THREE.Vector3(0,4.25,-17.2),smoother(p*1.18));
+    camera.fov=THREE.MathUtils.lerp(50,39,p);camera.updateProjectionMatrix();camera.lookAt(look);return;
+  }
+
+  if(phase==='ascension'){
+    const pt=phaseTime();const mid=meadowAle.group.position.clone().lerp(meadowKim.group.position,.5);
+    let shotPos=new THREE.Vector3(),shotTarget=new THREE.Vector3();let fov=46;
+    if(pt<2.4){
+      const p=smoother(pt/2.4);shotPos.set(mid.x+THREE.MathUtils.lerp(1.4,2.5,p),THREE.MathUtils.lerp(1.2,2.4,p),mid.z+THREE.MathUtils.lerp(3.8,4.8,p));shotTarget.set(mid.x,1.25,mid.z-.2);fov=THREE.MathUtils.lerp(48,43,p);
+    }else if(pt<5.0){
+      const p=smoother((pt-2.4)/2.6),a=THREE.MathUtils.lerp(.25,2.5,p),r=THREE.MathUtils.lerp(4.5,6.4,p);shotPos.set(mid.x+Math.cos(a)*r,3.2+Math.sin(p*Math.PI)*1.2,mid.z+Math.sin(a)*r);shotTarget.set(mid.x,1.8,mid.z);fov=44;
+    }else if(pt<7.4){
+      const p=smoother((pt-5)/2.4);shotPos.set(mid.x+THREE.MathUtils.lerp(12,16,p),THREE.MathUtils.lerp(7,12,p),mid.z+THREE.MathUtils.lerp(15,20,p));shotTarget.set(mid.x,THREE.MathUtils.lerp(2,6,p),mid.z-2);fov=THREE.MathUtils.lerp(50,58,p);
+    }else{
+      const p=smoother((pt-7.4)/3.1);shotPos.set(mid.x+THREE.MathUtils.lerp(7,3,p),THREE.MathUtils.lerp(13,23,p),mid.z+THREE.MathUtils.lerp(8,1.8,p));shotTarget.set(mid.x,THREE.MathUtils.lerp(8,18,p),mid.z-1);fov=THREE.MathUtils.lerp(52,40,p);
+    }
+    camera.position.lerp(shotPos,.08);camera.fov=THREE.MathUtils.lerp(camera.fov,fov,.08);camera.updateProjectionMatrix();camera.lookAt(shotTarget);return;
+  }
+
+  const player=currentPlayer;if(!player)return;
+  const dist=phase==='room'?6.6:phase==='meadow'?8.2:7.4;const height=phase==='room'?3.4:3.9;
+  desired.set(player.group.position.x+Math.sin(cameraYaw)*dist,player.group.position.y+height+Math.sin(cameraPitch)*1.5,player.group.position.z+Math.cos(cameraYaw)*dist);
+  target.set(player.group.position.x,player.group.position.y+1.38,player.group.position.z);
+  camera.position.lerp(desired,.08);camera.fov=THREE.MathUtils.lerp(camera.fov,50,.06);camera.updateProjectionMatrix();camera.lookAt(target);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.04), t = clock.elapsedTime;
+  frame++;
+  scenePulse = Math.sin(t * 0.9) * 0.5 + 0.5;
+  if (started) {
+    if (phase === 'concert' || phase === 'concert_touch') updateConcert(t, dt);
+    else if (phase === 'room' || phase === 'portal_cinematic') updateRoom(t, dt);
+    else if (phase === 'tunnel') updateTunnel(t);
+    else if (phase === 'meadow') updateMeadow(t, dt);
+    else if (phase === 'ascension') updateAscension(t);
+  }
+  updateCamera(t);
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(M
