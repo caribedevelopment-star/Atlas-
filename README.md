@@ -1,40 +1,35 @@
 # Al.Kim.ia
 
-Private browser-first interactive memory project.
+A private browser-first cinematic 3D experience built as a sequence of emotional memories.
 
-## Memory 01 — The Encounter
+## Current build
 
-The first world abstracts the WiZink concert into a cinematic memory: darkness, a dense crowd of non-human presences, a huge suspended glowing sphere, and two malleable entities that find each other.
+### Memory 01 — The Encounter
+An abstract concert arena inspired by the real meeting: a very bright suspended sphere, dense moving crowd, warm red/orange live lighting, and two malleable sculptural entities. Only Ale is controlled. As he finds Kim inside the crowd, the environment isolates their meeting.
 
-### Current rules
-
-- Only one character is controlled.
-- Kim is a narrative entity, not a second player.
-- Characters are abstract, malleable matter — never conventional humanoid avatars.
-- The concert should feel remembered rather than reconstructed literally.
-- UI stays minimal and cinematic.
-- The project name is **Al.Kim.ia**.
-
-## Stack
-
-- Three.js / WebGL
-- Static browser-first architecture
-- PWA manifest + service worker
-- Vercel-ready
-
-## Audio
-
-The repository intentionally does **not** include copyrighted commercial music. If you have a lawful local copy for private testing, place it at:
-
-`/audio/rawayana.mp3`
-
-The experience will try to play that file after the user presses ENTER; otherwise it falls back to the built-in synthetic concert atmosphere.
+### Memory 02 — The Room / The Door
+The concert dissolves into a quiet architectural interior. Movement returns after a cinematic transition. Approaching the glowing door triggers the next narrative threshold.
 
 ## Controls
 
-Desktop: WASD / arrow keys.
-Mobile: minimal touch pad.
+Desktop:
+- WASD / arrows: move
+- drag mouse: look around
 
-## Project state
+Mobile:
+- touch and drag on the left half: floating movement joystick
+- touch and drag on the right half: look around
 
-See `PROJECT_STATE.md` and `AGENTS.md` before significant changes.
+Movement is camera-relative.
+
+## Audio
+
+The repository does **not** include copyrighted commercial music. The prototype optionally looks for a privately supplied file at:
+
+`/audio/rawayana.mp3`
+
+If it is absent, the experience uses a synthetic concert ambience.
+
+## Deployment
+
+Static Three.js/PWA project, ready for Vercel.
