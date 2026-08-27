@@ -1,37 +1,46 @@
 # PROJECT STATE
 
 PROJECT: Al.Kim.ia
-STATUS: Prototype 02
+STATUS: Prototype 03
 PLATFORM: Browser / PWA
-STACK: Three.js + WebGL + Vercel
+STACK: Three.js / WebGL
+DEPLOYMENT: GitHub + Vercel
 
-## CURRENT EXPERIENCE
+## CURRENT FLOW
 Memory 01 — The Encounter
-Memory 02 — The Room / The Door
+→ Memory 02 — The Room
+→ Time Tunnel
+→ Memory 03 — The Awakening
 
-## IMPLEMENTED THIS ITERATION
-- Rebuilt Ale and Kim as chubbier, more sculptural, malleable entities
-- Increased concert crowd density and animated crowd movement
-- Increased suspended sphere bloom/emission and live-concert lighting
-- Added moving stage beams and more dynamic stage pulse
-- Improved the encounter beat: crowd/audio visually isolate Ale and Kim at proximity
-- Replaced button-pad movement with camera-relative movement
-- Added drag-to-look camera control
-- Added floating mobile joystick
-- Added cinematic camera transitions
-- Added automatic scene transition from concert into The Room
-- Added Room scene with architectural void and glowing symbolic door
-- Added door approach as the trigger for the next narrative beat
+## IMPLEMENTED
+- Larger abstract concert arena inspired by the WiZink memory
+- Much denser animated crowd with rhythmic motion and stage beams
+- Giant high-intensity suspended sphere
+- RAWA stage sign generated in WebGL from a canvas texture
+- Sculptural, thicker, more stylized malleable entities
+- One controllable character; Kim remains narrative
+- Camera-relative desktop movement + drag camera
+- Floating mobile joystick + touch camera
+- Proximity isolation: crowd/audio/light reduce around the encounter
+- Cinematic hand-contact beat between Ale and Kim
+- Hand contact triggers Memory 02
+- Architectural Room with luminous door
+- Door triggers a time-tunnel transition
+- Memory 03 — The Awakening: dry world gradually regains green and lavender as Ale advances with Kim
+- Al.Kim.ia typography and branding across the whole experience
+- PWA scaffold and optional private audio hook at /audio/rawayana.mp3
 
 ## NEXT
-- Review entities at real device scale and further sculpt proportions
-- Improve concert sound once user provides licensed/private source audio
-- Add richer crowd silhouettes and arena depth
-- Build the door opening into the dry landscape / field scene
-- Tune mobile GPU performance
+- Visual QA on desktop and iPhone
+- Make entity surface softer / more elastic if required
+- Improve concert silhouettes, lighting choreography and parallax
+- Add spatial audio zones and bass-reactive lighting
+- Expand Memory 03 into the full lavender meadow
+- Add a proper ascension prototype after the meadow works emotionally
 
 ## DO NOT
 - Add multiplayer
-- Add humanoid realistic avatars
-- Add conventional game HUD
-- Add generic next/previous scene buttons
+- Add conventional humanoid avatars
+- Add generic HUD or Next Scene buttons
+- Recreate the venue literally
+- Include copyrighted commercial audio in the public repository
