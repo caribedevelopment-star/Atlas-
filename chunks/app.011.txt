@@ -1,0 +1,3 @@
+ath.min(devicePixelRatio || 1, 1.5));
+  renderer.setSize(innerWidth, innerHeight);
+});
