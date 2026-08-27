@@ -1,4 +1,4 @@
-rtDust = ambientPoints(900, { x: 54, y: 16, z: 54 }, '#ff7c26', 0.045, 0.24, concertRoot);
+: 54, y: 16, z: 54 }, '#ff7c26', 0.045, 0.24, concertRoot);
 
 const concertAle = new Entity({ parent: concertRoot, position: [-1.4, 0, 14.2], core: '#b9c1c9', variant: 'ale', scale: 1.1 });
 const concertKim = new Entity({ parent: concertRoot, position: [1.6, 0, 2.2], core: '#d59763', variant: 'kim', scale: 1.08 });
@@ -22,63 +22,80 @@ function updateBond(t, meet = 0) {
   bondMat.opacity = Math.max(0, (proximity - 0.52) / 0.48) * 0.52 + meet * 0.48;
 }
 
+// ---------- ATMOSPHERE / SKY ----------
+function createSkyDome(radius=90) {
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: {
+      uTime: { value: 0 },
+      uSeason: { value: 0 },
+      uSunDir: { value: new THREE.Vector3(-.35,.65,.25).normalize() },
+      uCloud: { value: .45 }
+    },
+    vertexShader: `varying vec3 vDir; void main(){ vDir=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `
+      varying vec3 vDir; uniform float uTime; uniform float uSeason; uniform vec3 uSunDir; uniform float uCloud;
+      float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+      float noise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+      float fbm(vec3 p){float f=0.;float a=.52;for(int i=0;i<4;i++){f+=noise(p)*a;p*=2.03;a*=.5;}return f;}
+      void main(){
+        float h=clamp(vDir.y*.5+.5,0.,1.);
+        float s=clamp(uSeason,0.,4.);
+        vec3 desertH=vec3(.66,.53,.39), desertZ=vec3(.32,.42,.50);
+        vec3 winterH=vec3(.82,.84,.84), winterZ=vec3(.42,.50,.57);
+        vec3 springH=vec3(.72,.78,.73), springZ=vec3(.34,.52,.62);
+        vec3 lavH=vec3(.93,.67,.52), lavZ=vec3(.32,.43,.61);
+        vec3 ascH=vec3(.97,.79,.68), ascZ=vec3(.21,.34,.58);
+        vec3 H=mix(desertH,winterH,smoothstep(.55,1.05,s));
+        H=mix(H,springH,smoothstep(1.25,2.0,s)); H=mix(H,lavH,smoothstep(2.1,3.0,s)); H=mix(H,ascH,smoothstep(3.1,4.0,s));
+        vec3 Z=mix(desertZ,winterZ,smoothstep(.55,1.05,s));
+        Z=mix(Z,springZ,smoothstep(1.25,2.0,s)); Z=mix(Z,lavZ,smoothstep(2.1,3.0,s)); Z=mix(Z,ascZ,smoothstep(3.1,4.0,s));
+        vec3 col=mix(H,Z,pow(h,.62));
+        float cloudNoise=fbm(vDir*3.2+vec3(uTime*.006,0.,uTime*.003));
+        float cloud=smoothstep(.54,.74,cloudNoise)*smoothstep(.46,.72,vDir.y)*uCloud;
+        col=mix(col,vec3(.93,.91,.87),cloud*.42);
+        float sun=pow(max(dot(normalize(vDir),normalize(uSunDir)),0.),180.);
+        float glow=pow(max(dot(normalize(vDir),normalize(uSunDir)),0.),16.);
+        col += vec3(1.0,.58,.27)*sun*1.4 + vec3(1.0,.55,.28)*glow*.18;
+        gl_FragColor=vec4(col,1.);
+      }`
+  });
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,48,32),mat);
+  return {mesh,material:mat};
+}
+
+function windField(x,z,t,strength=1){
+  const gust=.28+Math.pow(Math.max(0,Math.sin(t*.31)),5)*1.25;
+  const a=Math.sin(t*.93+x*.18+z*.095);
+  const b=Math.sin(t*.47-x*.07+z*.16+2.4);
+  const c=Math.cos(t*.22+x*.025-z*.04);
+  return {x:(a*.62+b*.28+c*.1)*.14*gust*strength,z:(b*.35+a*.15)*.09*gust*strength,gust};
+}
+
 // ---------- ROOM ----------
-const roomFloor = new THREE.Mesh(new THREE.PlaneGeometry(30, 42), new THREE.MeshStandardMaterial({ color: '#12100f', roughness: 0.88, metalness: 0.1 }));
-roomFloor.rotation.x = -Math.PI / 2; roomRoot.add(roomFloor);
-const roomCeil = new THREE.Mesh(new THREE.PlaneGeometry(30, 42), new THREE.MeshStandardMaterial({ color: '#060605', roughness: 1, side: THREE.DoubleSide }));
-roomCeil.position.y = 11.5; roomCeil.rotation.x = Math.PI / 2; roomRoot.add(roomCeil);
-for (const [x, z, ry, w] of [[-15, 0, Math.PI / 2, 42], [15, 0, Math.PI / 2, 42], [0, -16, 0, 30], [0, 16, 0, 30]]) {
-  const wall = new THREE.Mesh(new THREE.PlaneGeometry(w, 11.5), new THREE.MeshStandardMaterial({ color: '#0b0a09', roughness: 0.96, side: THREE.DoubleSide }));
-  wall.position.set(x, 5.75, z); wall.rotation.y = ry; roomRoot.add(wall);
+const roomFloor = new THREE.Mesh(new THREE.PlaneGeometry(34, 46), new THREE.MeshStandardMaterial({ color: '#11100f', roughness: .97, metalness: .015 }));
+roomFloor.rotation.x=-Math.PI/2; roomRoot.add(roomFloor);
+const roomCeil = new THREE.Mesh(new THREE.PlaneGeometry(34,46), new THREE.MeshStandardMaterial({color:'#050505',roughness:1,side:THREE.DoubleSide}));
+roomCeil.position.y=12.5; roomCeil.rotation.x=Math.PI/2; roomRoot.add(roomCeil);
+for(const [x,z,ry,w] of [[-17,0,Math.PI/2,46],[17,0,Math.PI/2,46],[0,-18,0,34],[0,18,0,34]]){
+  const wall=new THREE.Mesh(new THREE.PlaneGeometry(w,12.5),new THREE.MeshStandardMaterial({color:'#0a0908',roughness:.98,side:THREE.DoubleSide}));
+  wall.position.set(x,6.25,z); wall.rotation.y=ry; roomRoot.add(wall);
 }
-const roomGlow = new THREE.PointLight('#f1d0aa', 18, 24, 2); roomGlow.position.set(-5, 7, 4); roomRoot.add(roomGlow);
-const roomBackLight = new THREE.PointLight('#9c7a57', 6, 20, 2); roomBackLight.position.set(0, 3, -10); roomRoot.add(roomBackLight);
-
-const portalFrame = new THREE.Group(); portalFrame.position.set(0, 0, -15.4); roomRoot.add(portalFrame);
-const portalFrameMat = new THREE.MeshStandardMaterial({ color: '#191510', roughness: 0.65 });
-const leftBar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8.5, 0.5), portalFrameMat); leftBar.position.set(-3.2, 4.25, 0); portalFrame.add(leftBar);
-const rightBar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8.5, 0.5), portalFrameMat); rightBar.position.set(3.2, 4.25, 0); portalFrame.add(rightBar);
-const topBar = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.6, 0.5), portalFrameMat); topBar.position.set(0, 8.2, 0); portalFrame.add(topBar);
-const baseBar = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.36, 0.5), portalFrameMat); baseBar.position.set(0, 0.18, 0); portalFrame.add(baseBar);
-const portalPlane = new THREE.Mesh(new THREE.PlaneGeometry(5.1, 6.9), new THREE.MeshBasicMaterial({ color: '#f3d7b1', transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending }));
-portalPlane.position.set(0, 4.1, 0.18); portalFrame.add(portalPlane);
-const portalHalo = new THREE.PointLight('#f6c58c', 54, 16, 2); portalHalo.position.set(0, 4.2, 1.8); portalFrame.add(portalHalo);
-
-const portalPreview = new THREE.Group();
-portalPreview.position.set(0, 0.05, -15.0); roomRoot.add(portalPreview);
-const previewGround = new THREE.Mesh(new THREE.PlaneGeometry(12, 24), new THREE.MeshStandardMaterial({ color: '#89735c', roughness: 1 }));
-previewGround.rotation.x = -Math.PI / 2; previewGround.position.z = -8; portalPreview.add(previewGround);
-const previewLav = new THREE.InstancedMesh(new THREE.ConeGeometry(0.05, 0.7, 5), new THREE.MeshStandardMaterial({ color: '#7b5ca0', roughness: 0.92, transparent: true, opacity: 0.0 }), 120);
-portalPreview.add(previewLav);
-for (let i = 0; i < 120; i++) {
-  crowdDummy.position.set((Math.random() - 0.5) * 5.8, 0.35, -2 - Math.random() * 10);
-  crowdDummy.rotation.y = Math.random() * 6.28;
-  crowdDummy.scale.setScalar(0.6 + Math.random() * 0.9);
-  crowdDummy.updateMatrix();
-  previewLav.setMatrixAt(i, crowdDummy.matrix);
+// Architectural monoliths give the void scale without filling it with decoration.
+for(const [x,z,sx,sy,sz] of [[-8,-5,2.2,8,3.6],[7,-9,3.4,5.6,2.4],[-5,8,1.6,4.2,2.0]]){
+  const slab=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),new THREE.MeshStandardMaterial({color:'#15120f',roughness:.94}));
+  slab.position.set(x,sy/2,z); roomRoot.add(slab);
 }
-previewLav.instanceMatrix.needsUpdate = true;
-const previewDust = ambientPoints(180, { x: 7, y: 5, z: 12 }, '#f6d7a9', 0.05, 0.22, portalPreview);
+const roomGlow=new THREE.PointLight('#e6c29e',14,28,2); roomGlow.position.set(-7,8,4); roomRoot.add(roomGlow);
+const roomBackLight=new THREE.PointLight('#8d7059',7,22,2); roomBackLight.position.set(0,4,-13); roomRoot.add(roomBackLight);
 
-const roomAle = new Entity({ parent: roomRoot, position: [-0.9, 0, 8.8], core: '#b9c1c9', variant: 'ale', scale: 1.05 });
-const roomKim = new Entity({ parent: roomRoot, position: [1.4, 0, 6.8], core: '#d59763', variant: 'kim', scale: 1.02 });
-
-// ---------- TUNNEL ----------
-const tunnelRings = [];
-for (let i = 0; i < 42; i++) {
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(2.8 + i * 0.03, 0.045, 7, 72),
-    new THREE.MeshBasicMaterial({ color: i % 3 === 0 ? '#f5d3ae' : '#bc8c63', transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false })
-  );
-  ring.position.z = -i * 2.2;
-  ring.rotation.z = i * 0.24;
-  tunnelRoot.add(ring);
-  tunnelRings.push(ring);
-}
-const tunnelParticles = ambientPoints(1400, { x: 12, y: 12, z: 120 }, '#f7d8b6', 0.035, 0.4, tunnelRoot);
-
-// ---------- MEADOW ----------
-const meadowFloorMat = new THREE.MeshStandardMaterial({ color: '#866f58', roughness: 1, metalness: 0 });
-const meadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(100, 120), meadowFloorMat);
-meadowFloor.rotation.x = -Math.PI / 2; meadowFloor.position.z = -18; meadowRoot.add(meadowFloor);
-const meadowHemi = new THREE.HemisphereLight('#ced8de', '#7b69
+const portalFrame=new THREE.Group(); portalFrame.position.set(0,0,-17.25); roomRoot.add(portalFrame);
+const portalFrameMat=new THREE.MeshStandardMaterial({color:'#18140f',roughness:.98,metalness:0});
+const portalBars=[
+  [new THREE.BoxGeometry(.72,9.7,.95),[-3.65,4.85,0]],
+  [new THREE.BoxGeometry(.72,9.7,.95),[3.65,4.85,0]],
+  [new THREE.BoxGeometry(8.0,.72,.95),[0,9.34,0]],
+  [new THREE.BoxGeometry(8.0,.32,.95),[0,.18,0]]
+];
+for(const [g,p] of portalBars){const m=new THREE.Mesh(g,portalFrameMat);m.position.set(...p);p
