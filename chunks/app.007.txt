@@ -1,110 +1,108 @@
-roup.position, 0.5).add(new THREE.Vector3(0, 2.2, 0)), 0.07);
-  intimateLight.intensity = proximity * 42 + touchMix * 25;
+BasicMaterial({color:i%3===0?'#e7c29f':'#8c6baa',transparent:true,opacity:0,blending:THREE.AdditiveBlending});const l=new THREE.Line(geo,mat);meadowRoot.add(l);ascensionLines.push(l)}
 
-  concertDust.rotation.y = t * 0.012;
-  concertDust.position.y = Math.sin(t * 0.14) * 0.24;
-  stageBars.forEach((b, i) => { b.material.opacity = 0.28 + Math.max(0, Math.sin(t * 6.0 + i * 0.4)) * 0.7; });
-  concertBeams.forEach((b, i) => { b.rotation.y = Math.sin(t * 0.46 + i * 0.2) * 0.55; b.material.opacity = 0.02 + Math.max(0, Math.sin(t * 3.8 + i)) * 0.038; });
-  const orbPulse = 1 + Math.sin(t * 1.8) * 0.026 + proximity * 0.04;
-  orb.scale.setScalar(orbPulse); orbLight.intensity = 1030 + Math.max(0, Math.sin(t * 2.1)) * 280 + proximity * 150;
-  orbHalos.forEach((h, i) => h.scale.setScalar(1 + Math.sin(t * (0.44 + i * 0.06) + i) * (0.05 + i * 0.015)));
+const meadowAle=new Entity({parent:meadowRoot,position:[-1.2,0,14],core:'#c1c3c5',variant:'ale',scale:1.07});
+const meadowKim=new Entity({parent:meadowRoot,position:[1.25,0,12],core:'#c9ad96',variant:'kim',scale:1.03});
 
-  if (phase === 'concert' && d < 2.3) {
-    setPhase('concert_touch');
-    setHint('');
+function updateInstancedRise(mesh,source,amount,bob=0,t=0){
+  for(let i=0;i<source.length;i++){const d=source[i];crowdDummy.position.set(d.pos.x,d.pos.y+amount*d.rise+Math.sin(t*.9+i*.17)*bob*amount,d.pos.z);crowdDummy.rotation.y=d.rot+amount*.35;crowdDummy.scale.setScalar(d.scl*(1+amount*.08));crowdDummy.updateMatrix();mesh.setMatrixAt(i,crowdDummy.matrix)}mesh.instanceMatrix.needsUpdate=true;
+}
+
+// ---------- AUDIO ----------
+async function createAudio() {
+  const ext = new Audio('/audio/rawayana.mp3');
+  ext.loop = true; ext.preload = 'auto'; ext.volume = 0.72;
+  try {
+    await new Promise((res, rej) => {
+      const ok = () => res(); const bad = () => rej();
+      ext.addEventListener('canplaythrough', ok, { once: true });
+      ext.addEventListener('error', bad, { once: true });
+      ext.load(); setTimeout(bad, 1000);
+    });
+    await ext.play();
+    return { set(p) { ext.volume = 0.66 - p * 0.32; }, fade(v) { ext.volume = v; } };
+  } catch {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    const ctx = new AC();
+    const master = ctx.createGain(); master.gain.value = 0.66; master.connect(ctx.destination);
+    const crowdGain = ctx.createGain(); crowdGain.gain.value = 0.14; crowdGain.connect(master);
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const arr = buf.getChannelData(0); for (let i = 0; i < arr.length; i++) arr[i] = (Math.random() * 2 - 1) * 0.32;
+    const noise = ctx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    const low = ctx.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 880;
+    noise.connect(low).connect(crowdGain); noise.start();
+    const bassGain = ctx.createGain(); bassGain.gain.value = 0.08; bassGain.connect(master);
+    const bass = ctx.createOscillator(); bass.type = 'sine'; bass.frequency.value = 52; bass.connect(bassGain); bass.start();
+    const pulseGain = ctx.createGain(); pulseGain.gain.value = 0.024; pulseGain.connect(master);
+    const pulse = ctx.createOscillator(); pulse.type = 'triangle'; pulse.frequency.value = 104; pulse.connect(pulseGain); pulse.start();
+    ctx.resume();
+    return {
+      set(p) {
+        crowdGain.gain.setTargetAtTime(0.14 * (1 - p * 0.92), ctx.currentTime, 0.08);
+        bassGain.gain.setTargetAtTime(0.08 * (1 - p * 0.5), ctx.currentTime, 0.08);
+        pulseGain.gain.setTargetAtTime(0.024 + p * 0.045, ctx.currentTime, 0.08);
+      },
+      fade(v) { master.gain.setTargetAtTime(v, ctx.currentTime, 0.15); }
+    };
   }
-  if (phase === 'concert_touch') {
-    const mid = concertAle.group.position.clone().lerp(concertKim.group.position, 0.5);
-    concertAle.group.position.lerp(new THREE.Vector3(mid.x - 0.9, 0, mid.z + 0.04), 0.03);
-    concertKim.group.position.lerp(new THREE.Vector3(mid.x + 0.9, 0, mid.z - 0.04), 0.03);
-    if (phaseTime() > 3.2) startRoom();
+}
+
+// ---------- INPUT ----------
+function key(e, v) {
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup') keyboard.forward = v;
+  if (k === 's' || k === 'arrowdown') keyboard.back = v;
+  if (k === 'a' || k === 'arrowleft') keyboard.left = v;
+  if (k === 'd' || k === 'arrowright') keyboard.right = v;
+}
+addEventListener('keydown', (e) => { key(e, true); if (e.key.startsWith('Arrow')) e.preventDefault(); if (started) hint.style.opacity = '.25'; }, { passive: false });
+addEventListener('keyup', (e) => key(e, false));
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.48) {
+    joyPointer = e.pointerId; joyOrigin.set(e.clientX, e.clientY);
+    joystick.style.left = `${e.clientX - 60}px`; joystick.style.top = `${e.clientY - 60}px`; joystick.style.bottom = 'auto'; joystick.classList.remove('hidden');
+    return;
   }
+  lookPointer = e.pointerId; lastLook.set(e.clientX, e.clientY);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerId === joyPointer) {
+    const dx = e.clientX - joyOrigin.x, dy = e.clientY - joyOrigin.y;
+    const len = Math.min(46, Math.hypot(dx, dy)); const a = Math.atan2(dy, dx);
+    mobileAxis.set(Math.cos(a) * len / 46, -Math.sin(a) * len / 46);
+    joystickKnob.style.transform = `translate(${Math.cos(a) * len}px,${Math.sin(a) * len}px)`;
+  } else if (e.pointerId === lookPointer) {
+    const dx = e.clientX - lastLook.x, dy = e.clientY - lastLook.y;
+    cameraYaw -= dx * 0.0048;
+    cameraPitch = THREE.MathUtils.clamp(cameraPitch - dy * 0.0035, -0.16, 0.58);
+    lastLook.set(e.clientX, e.clientY);
+  }
+});
+function releasePointer(e) {
+  if (e.pointerId === joyPointer) {
+    joyPointer = null; mobileAxis.set(0, 0); joystickKnob.style.transform = 'translate(0,0)'; joystick.classList.add('hidden');
+  }
+  if (e.pointerId === lookPointer) lookPointer = null;
 }
+canvas.addEventListener('pointerup', releasePointer);
+canvas.addEventListener('pointercancel', releasePointer);
 
-function updateRoom(t, dt) {
-  movePlayer(dt, { x0: -9, x1: 9, z0: -11, z1: 10.8 });
-  roomAle.update(t, 0.16, 0); roomKim.update(t, 0.2, 0);
-  const roomD = roomAle.group.position.distanceTo(roomKim.group.position);
-  roomKim.group.position.lerp(roomAle.group.position.clone().add(new THREE.Vector3(2.1, 0, -2)), 0.01);
-  const doorDist = roomAle.group.position.distanceTo(new THREE.Vector3(0, 0, -12.2));
-  const portalLife = 0.5 + Math.sin(t * 0.7) * 0.5;
-  previewLav.material.opacity = 0.15 + portalLife * 0.5;
-  portalPlane.material.opacity = 0.15 + portalLife * 0.15;
-  portalHalo.intensity = 40 + portalLife * 22;
-  previewDust.material.opacity = 0.12 + portalLife * 0.14;
-  const previewSeason = (Math.sin(t * 0.35) + 1) * 0.5;
-  previewGround.material.color.lerp(new THREE.Color(previewSeason > 0.5 ? '#6f8b59' : '#8c775e'), 0.04);
-  if (roomD < 2.6) setHint('ACÉRCATE AL PORTAL');
-  if (doorDist < 2.5) startTunnel();
+function movementVector() {
+  const x = (keyboard.right ? 1 : 0) - (keyboard.left ? 1 : 0) + mobileAxis.x;
+  const z = (keyboard.back ? 1 : 0) - (keyboard.forward ? 1 : 0) - mobileAxis.y;
+  tmp.set(x, 0, z);
+  if (tmp.lengthSq() > 1) tmp.normalize();
+  camForward.set(Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+  camRight.set(Math.cos(cameraYaw), 0, Math.sin(cameraYaw));
+  return new THREE.Vector3().addScaledVector(camForward, -tmp.z).addScaledVector(camRight, tmp.x);
 }
-
-function updateTunnel(t) {
-  const p = phaseTime();
-  camera.position.set(Math.sin(p * 0.22) * 0.25, Math.sin(p * 0.4) * 0.18, 4 - p * 10.5);
-  camera.rotation.z = Math.sin(p * 0.8) * 0.07;
-  tunnelRings.forEach((r, i) => {
-    r.rotation.z += 0.01 * (1 + (i % 3) * 0.18);
-    r.material.opacity = 0.08 + Math.max(0, Math.sin(t * 2 + i * 0.45)) * 0.18;
-  });
-  tunnelParticles.rotation.z = p * 0.06;
-}
-
-function updateMeadowSeasons(t) {
-  const zProg = clamp01((14 - meadowAle.group.position.z) / 48);
-  const together = 1 - clamp01((meadowAle.group.position.distanceTo(meadowKim.group.position) - 1.8) / 6);
-  worldProgress = THREE.MathUtils.lerp(worldProgress, zProg * 0.8 + together * 0.2, 0.03);
-
-  const desert = 1 - smooth(worldProgress * 1.1);
-  const winter = smooth((worldProgress - 0.12) / 0.22) * (1 - smooth((worldProgress - 0.43) / 0.18));
-  const spring = smooth((worldProgress - 0.38) / 0.22);
-  const lavenderPhase = smooth((worldProgress - 0.62) / 0.28);
-
-  dryMat.opacity = 0.2 + desert * 0.42;
-  snowMat.opacity = winter * 0.62;
-  grassMat.opacity = spring * 0.75;
-  lavMat.opacity = lavenderPhase * 0.94;
-  meadowDust.material.opacity = 0.06 + desert * 0.22;
-  meadowSnow.material.opacity = winter * 0.38;
-  meadowWarm.material.opacity = lavenderPhase * 0.34;
-
-  meadowFloorMat.color.lerp(
-    worldProgress < 0.15 ? new THREE.Color('#8e755b') : worldProgress < 0.38 ? new THREE.Color('#d9dcdd') : worldProgress < 0.7 ? new THREE.Color('#697f56') : new THREE.Color('#7a9060'),
-    0.025
-  );
-  horizon.material.color.lerp(worldProgress < 0.18 ? new THREE.Color('#c5b9aa') : worldProgress < 0.38 ? new THREE.Color('#dfe5e8') : worldProgress < 0.72 ? new THREE.Color('#c8d0c7') : new THREE.Color('#f3d8b6'), 0.03);
-  meadowHemi.intensity = 0.9 + spring * 0.55 + lavenderPhase * 0.4;
-  meadowSun.intensity = 1.6 + spring * 0.6 + lavenderPhase * 0.85;
-  scene.fog.color.lerp(worldProgress < 0.18 ? new THREE.Color('#b9b3ab') : worldProgress < 0.38 ? new THREE.Color('#dce2e5') : worldProgress < 0.72 ? new THREE.Color('#c7d1c6') : new THREE.Color('#efd2b1'), 0.03);
-  scene.background.lerp(worldProgress < 0.18 ? new THREE.Color('#b8b0a7') : worldProgress < 0.38 ? new THREE.Color('#e1e6e8') : worldProgress < 0.72 ? new THREE.Color('#c8d0cb') : new THREE.Color('#f1d5b7'), 0.02);
-
-  if (worldProgress < 0.12) setHint('DEL DESIERTO HACIA EL INVIERNO');
-  else if (worldProgress < 0.38) setHint('TODO SE DETIENE');
-  else if (worldProgress < 0.7) setHint('EL MUNDO RECUERDA CÓMO ESTAR VIVO');
-  else if (worldProgress < 0.94) setHint('LA LAVANDA DESPIERTA');
-  else setHint('ACÉRCATE A ELLA PARA ASCENDER');
-
-  return { winter, spring, lavenderPhase };
-}
-
-function updateMeadow(t, dt) {
-  movePlayer(dt, { x0: -14, x1: 14, z0: -52, z1: 16 });
-  meadowAle.update(t, 0.14 + worldProgress * 0.32, 0);
-  meadowKim.update(t, 0.18 + worldProgress * 0.3, 0);
-  const desiredKim = meadowAle.group.position.clone().add(new THREE.Vector3(1.9, 0, -2.6));
-  meadowKim.group.position.lerp(desiredKim, 0.012);
-  const seasons = updateMeadowSeasons(t);
-
-  const sway = 1 + Math.sin(t * 0.8) * 0.06;
-  dryStems.rotation.z = Math.sin(t * 0.24) * 0.01;
-  grass.scale.y = sway;
-  lavender.scale.y = 1 + seasons.lavenderPhase * 0.06 + Math.sin(t * 0.9) * 0.02;
-  meadowWarm.rotation.y = t * 0.016;
-  meadowSnow.position.y = Math.sin(t * 0.3) * 0.12;
-
-  const close = meadowAle.group.position.distanceTo(meadowKim.group.position) < 2.6;
-  if (worldProgress > 0.97 && close) beginAscension();
-}
-
-function updateAscension(t) {
-  ascendMix = smoother(phaseTime() / 8.5);
-  meadowAle.group.position.x = THREE.MathUtils.lerp(meadowAle.group.positi
+function movePlayer(dt, bounds) {
+  if (!currentPlayer || transitioning || phase === 'tunnel' || phase === 'ascension' || phase === 'concert_touch' || phase === 'portal_cinematic') return;
+  const v = movementVector();
+  if (v.lengthSq() > 0.01) {
+    v.normalize();
+    currentPlayer.group.position.addScaledVector(v, dt * 3.7);
+    currentPlayer.group.rotation.y = THREE.MathUtils.lerp(currentPlayer.group.rotation.y, Math.atan2(v.x, v.z), 0.08);
+  }
+  currentPlayer.group.position.x = THREE.MathUtils.clamp(currentPlayer.group.position.x, bounds.x0, bounds.x1);
+  current
