@@ -1,100 +1,61 @@
-57', 1.08); meadowRoot.add(meadowHemi);
-const meadowSun = new THREE.DirectionalLight('#ffd5a0', 2.2); meadowSun.position.set(-18, 20, 14); meadowRoot.add(meadowSun);
-const horizon = new THREE.Mesh(new THREE.CylinderGeometry(62, 62, 10, 72, 1, true), new THREE.MeshStandardMaterial({ color: '#d5dce0', side: THREE.BackSide, roughness: 1 }));
-horizon.position.y = 8; meadowRoot.add(horizon);
+ortalFrame.add(m)}
 
-const dryMat = new THREE.MeshStandardMaterial({ color: '#8f7a61', roughness: 1, transparent: true, opacity: 0.42 });
-const snowMat = new THREE.MeshStandardMaterial({ color: '#d9dfdf', roughness: 1, transparent: true, opacity: 0.0 });
-const grassMat = new THREE.MeshStandardMaterial({ color: '#5f744f', roughness: 0.96, transparent: true, opacity: 0.0 });
-const lavMat = new THREE.MeshStandardMaterial({ color: '#72569b', roughness: 0.9, transparent: true, opacity: 0.0 });
+// Real-time portal: a second scene is rendered into this surface.
+const portalTarget=new THREE.WebGLRenderTarget(640,896,{depthBuffer:true});
+portalTarget.texture.colorSpace=THREE.SRGBColorSpace;
+const portalPlane=new THREE.Mesh(new THREE.PlaneGeometry(6.45,8.62),new THREE.MeshBasicMaterial({map:portalTarget.texture,toneMapped:false}));
+portalPlane.position.set(0,4.72,.48); portalFrame.add(portalPlane);
+const portalVeil=new THREE.Mesh(new THREE.PlaneGeometry(6.6,8.8),new THREE.MeshBasicMaterial({color:'#f5cf9d',transparent:true,opacity:.055,blending:THREE.AdditiveBlending,depthWrite:false}));
+portalVeil.position.set(0,4.72,.52); portalFrame.add(portalVeil);
+const portalHalo=new THREE.PointLight('#f3bb78',44,20,2); portalHalo.position.set(0,4.5,1.8); portalFrame.add(portalHalo);
 
-const dryStems = new THREE.InstancedMesh(new THREE.ConeGeometry(0.03, 0.52, 4), dryMat, 800);
-const snowStems = new THREE.InstancedMesh(new THREE.ConeGeometry(0.02, 0.36, 5), snowMat, 650);
-const grass = new THREE.InstancedMesh(new THREE.ConeGeometry(0.03, 0.45, 5), grassMat, 1200);
-const lavender = new THREE.InstancedMesh(new THREE.ConeGeometry(0.055, 0.82, 6), lavMat, 860);
-meadowRoot.add(dryStems, snowStems, grass, lavender);
+const portalScene=new THREE.Scene(); portalScene.fog=new THREE.FogExp2('#d4c6b5',.025);
+const portalCam=new THREE.PerspectiveCamera(44,640/896,.1,80); portalCam.position.set(0,2.6,8); portalCam.lookAt(0,1.5,-12);
+const pSky=createSkyDome(55); portalScene.add(pSky.mesh);
+const pGroundMat=new THREE.MeshStandardMaterial({color:'#866f59',roughness:1});
+const pGroundGeo=new THREE.PlaneGeometry(26,50,28,40); const pPos=pGroundGeo.attributes.position;
+for(let i=0;i<pPos.count;i++){const x=pPos.getX(i),y=pPos.getY(i);pPos.setZ(i,Math.sin(x*.42)*.18+Math.sin(y*.21+x*.13)*.22)}pPos.needsUpdate=true;pGroundGeo.computeVertexNormals();
+const pGround=new THREE.Mesh(pGroundGeo,pGroundMat); pGround.rotation.x=-Math.PI/2;pGround.position.z=-15;portalScene.add(pGround);
+portalScene.add(new THREE.HemisphereLight('#d8dfe0','#685947',1.2));
+const pSun=new THREE.DirectionalLight('#ffd1a0',2.1);pSun.position.set(-10,16,8);portalScene.add(pSun);
+const pStemMat=new THREE.MeshStandardMaterial({color:'#50634a',roughness:.96,transparent:true,opacity:.72});
+const pBudMat=new THREE.MeshStandardMaterial({color:'#76529a',roughness:.92,transparent:true,opacity:.78});
+const pStems=new THREE.InstancedMesh(new THREE.CylinderGeometry(.018,.024,.8,5),pStemMat,170);
+const pBuds=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(.09,0),pBudMat,170); portalScene.add(pStems,pBuds);
+const pData=[];
+for(let i=0;i<170;i++){const x=(Math.random()-.5)*18,z=-2-Math.random()*36,s=.65+Math.random()*.9,rot=Math.random()*6.28;pData.push({x,z,s,rot,seed:Math.random()*9});crowdDummy.position.set(x,.4,z);crowdDummy.scale.set(.7*s,s,.7*s);crowdDummy.rotation.y=rot;crowdDummy.updateMatrix();pStems.setMatrixAt(i,crowdDummy.matrix);crowdDummy.position.set(x,.85*s,z);crowdDummy.scale.set(1.0*s,1.45*s,.86*s);crowdDummy.updateMatrix();pBuds.setMatrixAt(i,crowdDummy.matrix)}
+pStems.instanceMatrix.needsUpdate=pBuds.instanceMatrix.needsUpdate=true;
+const pDust=ambientPoints(260,{x:22,y:8,z:42},'#f5d9b2',.045,.24,portalScene);
 
-const dryData = [], snowData = [], grassData = [], lavenderData = [];
-function fillInstances(mesh, count, targetArray, spreadX, spreadZ, zMin, zMax, baseY, minS, maxS) {
-  for (let i = 0; i < count; i++) {
-    const pos = new THREE.Vector3((Math.random() - 0.5) * spreadX, baseY, zMin - Math.random() * (zMax - zMin));
-    const rot = Math.random() * Math.PI * 2;
-    const scl = minS + Math.random() * (maxS - minS);
-    targetArray.push({ pos, rot, scl, rise: Math.random() * 1.2 });
-    crowdDummy.position.copy(pos); crowdDummy.rotation.y = rot; crowdDummy.scale.setScalar(scl); crowdDummy.updateMatrix();
-    mesh.setMatrixAt(i, crowdDummy.matrix);
-  }
-  mesh.instanceMatrix.needsUpdate = true;
+// TouchDesigner-inspired membrane field, subtle enough to remain architectural.
+const portalFlowCount=420, portalFlowBase=[], portalFlowArr=new Float32Array(portalFlowCount*3);
+for(let i=0;i<portalFlowCount;i++){const edge=Math.random()<.5?-1:1;const x=(Math.random()<.5?edge*(3.4+Math.random()*.5):(Math.random()-.5)*7.2);const y=.4+Math.random()*8.8;const z=-16.4+Math.random()*2.4;const v=new THREE.Vector3(x,y,z);portalFlowBase.push(v);portalFlowArr.set([x,y,z],i*3)}
+const portalFlowGeo=new THREE.BufferGeometry();portalFlowGeo.setAttribute('position',new THREE.BufferAttribute(portalFlowArr,3));
+const portalFlowMat=new THREE.PointsMaterial({color:'#eac59b',size:.035,transparent:true,opacity:.18,depthWrite:false,blending:THREE.AdditiveBlending});
+const portalFlow=new THREE.Points(portalFlowGeo,portalFlowMat);roomRoot.add(portalFlow);
+
+const roomAle=new Entity({parent:roomRoot,position:[-.9,0,9.2],core:'#c1c3c5',variant:'ale',scale:1.07});
+const roomKim=new Entity({parent:roomRoot,position:[1.5,0,7.0],core:'#c9ad96',variant:'kim',scale:1.03});
+
+// ---------- MEMORY TUNNEL ----------
+// No sci-fi torus rings: the crossing is made from fragments, ribbons and memory residue.
+const tunnelFragments=[];
+const rawTex=textTexture('RAWA',{width:1024,height:256,color:'#ffae61',font:'900 170px Inter, Arial, sans-serif'});
+for(let i=0;i<14;i++){
+  let mesh;
+  if(i%4===0){mesh=new THREE.Mesh(new THREE.PlaneGeometry(5.2,1.35),new THREE.MeshBasicMaterial({map:rawTex,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));}
+  else if(i%4===1){mesh=new THREE.Mesh(new THREE.SphereGeometry(.65+Math.random()*1.1,20,16),new THREE.MeshBasicMaterial({color:'#ff9f42',wireframe:true,transparent:true,opacity:.13,blending:THREE.AdditiveBlending}));}
+  else if(i%4===2){mesh=new THREE.Mesh(new THREE.IcosahedronGeometry(.6+Math.random()*.8,1),new THREE.MeshBasicMaterial({color:'#b8a28e',wireframe:true,transparent:true,opacity:.11,blending:THREE.AdditiveBlending}));}
+  else {mesh=new THREE.Mesh(new THREE.PlaneGeometry(2.8,4.2),new THREE.MeshBasicMaterial({color:'#76549b',transparent:true,opacity:.06,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));}
+  mesh.position.set((Math.random()-.5)*8,(Math.random()-.5)*7,-5-i*4.6); mesh.rotation.set(Math.random()*2,Math.random()*2,Math.random()*2);tunnelRoot.add(mesh);tunnelFragments.push(mesh);
 }
-fillInstances(dryStems, 800, dryData, 56, 54, -8, 56, 0.25, 0.6, 1.2);
-fillInstances(snowStems, 650, snowData, 48, 50, -8, 52, 0.18, 0.55, 1.2);
-fillInstances(grass, 1200, grassData, 60, 64, -8, 62, 0.23, 0.55, 1.3);
-fillInstances(lavender, 860, lavenderData, 58, 52, -16, 58, 0.38, 0.7, 1.45);
-
-const meadowDust = ambientPoints(520, { x: 64, y: 12, z: 72 }, '#c9b28a', 0.05, 0.12, meadowRoot);
-const meadowSnow = ambientPoints(420, { x: 60, y: 12, z: 70 }, '#f3f8fb', 0.055, 0.0, meadowRoot);
-const meadowWarm = ambientPoints(620, { x: 62, y: 10, z: 64 }, '#ffddb4', 0.045, 0.0, meadowRoot);
-
-const meadowAle = new Entity({ parent: meadowRoot, position: [-1.2, 0, 14], core: '#b9c1c9', variant: 'ale', scale: 1.05 });
-const meadowKim = new Entity({ parent: meadowRoot, position: [1.25, 0, 12], core: '#d59763', variant: 'kim', scale: 1.03 });
-
-function updateInstancedRise(mesh, source, amount, bob = 0, t = 0) {
-  const dummy = crowdDummy;
-  for (let i = 0; i < source.length; i++) {
-    const d = source[i];
-    dummy.position.set(d.pos.x, d.pos.y + amount * d.rise + Math.sin(t * 0.9 + i * 0.17) * bob * amount, d.pos.z);
-    dummy.rotation.y = d.rot + amount * 0.35;
-    dummy.scale.setScalar(d.scl * (1 + amount * 0.08));
-    dummy.updateMatrix();
-    mesh.setMatrixAt(i, dummy.matrix);
-  }
-  mesh.instanceMatrix.needsUpdate = true;
-}
-
-// ---------- AUDIO ----------
-async function createAudio() {
-  const ext = new Audio('/audio/rawayana.mp3');
-  ext.loop = true; ext.preload = 'auto'; ext.volume = 0.72;
-  try {
-    await new Promise((res, rej) => {
-      const ok = () => res(); const bad = () => rej();
-      ext.addEventListener('canplaythrough', ok, { once: true });
-      ext.addEventListener('error', bad, { once: true });
-      ext.load(); setTimeout(bad, 1000);
-    });
-    await ext.play();
-    return { set(p) { ext.volume = 0.66 - p * 0.32; }, fade(v) { ext.volume = v; } };
-  } catch {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return null;
-    const ctx = new AC();
-    const master = ctx.createGain(); master.gain.value = 0.66; master.connect(ctx.destination);
-    const crowdGain = ctx.createGain(); crowdGain.gain.value = 0.14; crowdGain.connect(master);
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-    const arr = buf.getChannelData(0); for (let i = 0; i < arr.length; i++) arr[i] = (Math.random() * 2 - 1) * 0.32;
-    const noise = ctx.createBufferSource(); noise.buffer = buf; noise.loop = true;
-    const low = ctx.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 880;
-    noise.connect(low).connect(crowdGain); noise.start();
-    const bassGain = ctx.createGain(); bassGain.gain.value = 0.08; bassGain.connect(master);
-    const bass = ctx.createOscillator(); bass.type = 'sine'; bass.frequency.value = 52; bass.connect(bassGain); bass.start();
-    const pulseGain = ctx.createGain(); pulseGain.gain.value = 0.024; pulseGain.connect(master);
-    const pulse = ctx.createOscillator(); pulse.type = 'triangle'; pulse.frequency.value = 104; pulse.connect(pulseGain); pulse.start();
-    ctx.resume();
-    return {
-      set(p) {
-        crowdGain.gain.setTargetAtTime(0.14 * (1 - p * 0.92), ctx.currentTime, 0.08);
-        bassGain.gain.setTargetAtTime(0.08 * (1 - p * 0.5), ctx.currentTime, 0.08);
-        pulseGain.gain.setTargetAtTime(0.024 + p * 0.045, ctx.currentTime, 0.08);
-      },
-      fade(v) { master.gain.setTargetAtTime(v, ctx.currentTime, 0.15); }
-    };
-  }
+const tunnelParticles=ambientPoints(1700,{x:13,y:13,z:120},'#f0cba6',.032,.38,tunnelRoot);
+const tunnelLavParticles=ambientPoints(650,{x:11,y:11,z:105},'#8061a7',.04,.22,tunnelRoot);
+const tunnelLines=[];
+for(let i=0;i<10;i++){
+  const pts=[];for(let j=0;j<52;j++){const z=-j*1.8;pts.push(new THREE.Vector3(Math.sin(j*.23+i)*(.8+i*.12),Math.cos(j*.17+i*1.2)*(.5+i*.07),z))}
+  const geo=new THREE.BufferGeometry().setFromPoints(pts);const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:i%2?'#d9b28e':'#8c6aae',transparent:true,opacity:.08,blending:THREE.AdditiveBlending}));tunnelRoot.add(line);tunnelLines.push(line);
 }
 
-// ---------- INPUT ----------
-function key(e, v) {
-  const k = e.key.toLowerCase();
-  if (k === 'w' || k === 'arrowup') keyboard.forward = v;
-  if (k === 's' || k === 'arrowdown') keyboard.back = v;
-  if (k === 'a' || k === 'arrowleft') keyboard.left = v;
-  if (k === 'd' || k === 'arrowright') keyboard.right = v;
+// ---------- MEADOW / WEATHER ----------
+const meadowFloorMat=new THREE.MeshStandardMaterial({color:'#866f58',roughness:1,metalness:0})
