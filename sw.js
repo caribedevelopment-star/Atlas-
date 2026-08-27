@@ -1,4 +1,4 @@
-const CACHE = 'alkimia-v1';
+const CACHE = 'alkimia-v02';
 const CORE = ['/', '/index.html', '/styles.css', '/app.js', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
