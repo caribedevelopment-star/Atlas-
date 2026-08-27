@@ -1,46 +1,40 @@
-# PROJECT STATE
+# Al.Kim.ia — Project State (V4 rebuild)
 
-PROJECT: Al.Kim.ia
-STATUS: Prototype 03
-PLATFORM: Browser / PWA
-STACK: Three.js / WebGL
-DEPLOYMENT: GitHub + Vercel
+## Current playable flow
+1. **Memory 01 — The Encounter**
+   - larger concert space
+   - brighter central orb
+   - denser crowd
+   - stylized, thicker abstract entities
+   - RAWA sign on stage
+   - touch-driven meeting transition
 
-## CURRENT FLOW
-Memory 01 — The Encounter
-→ Memory 02 — The Room
-→ Time Tunnel
-→ Memory 03 — The Awakening
+2. **Memory 02 — The Room**
+   - darker, quieter architectural room
+   - portal showing a preview of the meadow beyond
+   - approach-triggered transition
 
-## IMPLEMENTED
-- Larger abstract concert arena inspired by the WiZink memory
-- Much denser animated crowd with rhythmic motion and stage beams
-- Giant high-intensity suspended sphere
-- RAWA stage sign generated in WebGL from a canvas texture
-- Sculptural, thicker, more stylized malleable entities
-- One controllable character; Kim remains narrative
-- Camera-relative desktop movement + drag camera
-- Floating mobile joystick + touch camera
-- Proximity isolation: crowd/audio/light reduce around the encounter
-- Cinematic hand-contact beat between Ale and Kim
-- Hand contact triggers Memory 02
-- Architectural Room with luminous door
-- Door triggers a time-tunnel transition
-- Memory 03 — The Awakening: dry world gradually regains green and lavender as Ale advances with Kim
-- Al.Kim.ia typography and branding across the whole experience
-- PWA scaffold and optional private audio hook at /audio/rawayana.mp3
+3. **Temporal Tunnel**
+   - cinematic time-tunnel transition between room and meadow
 
-## NEXT
-- Visual QA on desktop and iPhone
-- Make entity surface softer / more elastic if required
-- Improve concert silhouettes, lighting choreography and parallax
-- Add spatial audio zones and bass-reactive lighting
-- Expand Memory 03 into the full lavender meadow
-- Add a proper ascension prototype after the meadow works emotionally
+4. **Memory 03 — The Meadow**
+   - interactive progression through seasons
+   - desert -> winter -> green -> lavender
+   - suspended particles and warmer light as lavender appears
 
-## DO NOT
-- Add multiplayer
-- Add conventional humanoid avatars
-- Add generic HUD or Next Scene buttons
-- Recreate the venue literally
-- Include copyrighted commercial audio in the public repository
+5. **Ascension**
+   - triggered in the lavender state when Ale and Kim are close
+   - lavender rises particle-by-particle
+   - Ale and Kim begin ascending toward the sky
+
+## Focus of this rebuild
+- improve perceived quality
+- improve silhouette and motion of the entities
+- improve transitions and scene pacing
+- strengthen spatial atmosphere and progression
+
+## Still recommended next
+- beat-reactive lighting/audio when user provides music file
+- more refined portal shader / meadow vista
+- stronger cinematic close-up at first touch
+- post-processing pipeline if moving to a bundler setup
