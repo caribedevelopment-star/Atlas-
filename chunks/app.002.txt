@@ -1,25 +1,27 @@
- }
+(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);
+  }
   float fbm(vec3 p){float f=0.;float a=.55;for(int i=0;i<4;i++){f+=a*noise(p);p*=2.03;a*=.5;}return f;}
   void main(){
     vec3 n=normalize(vNormal);
     vec3 v=normalize(cameraPosition-vWorld);
-    float fres=pow(1.-max(dot(n,v),0.),2.15);
+    float fres=pow(1.-max(dot(n,v),0.),3.1);
     float mineral=fbm(vPos*2.7+vec3(0.,uTime*.03,0.));
     float fissure=smoothstep(.66,.92,mineral + sin(vPos.y*6.0 + mineral*4.0)*.14);
     float lambert=max(dot(n,normalize(vec3(-.45,.82,.32))),0.);
-    vec3 base=uBase*(.46+lambert*.62)+vec3(.018);
-    float glow=fissure*(.22+uReaction*.95)+fres*(.08+uReaction*.14);
+    vec3 base=uBase*(.54+lambert*.42)+vec3(.012);
+    float glow=fissure*(.10+uReaction*.72)+fres*(.018+uReaction*.05);
     vec3 col=mix(base,uCore,clamp(glow,0.,1.));
     col += uCore * fissure * (.12 + uReaction*.56);
     gl_FragColor=vec4(col,1.);
   }
 `;
 
-function makeEntityMaterial(base, core) {
+function makeEntityMaterial(base, core, variant=0) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uReaction: { value: 0 },
+      uVariant: { value: variant },
       uBase: { value: new THREE.Color(base) },
       uCore: { value: new THREE.Color(core) },
     },
@@ -29,7 +31,7 @@ function makeEntityMaterial(base, core) {
 }
 
 class Entity {
-  constructor({ parent, position = [0, 0, 0], core = '#d69155', base = '#090909', variant = 'ale', scale = 1 } = {}) {
+  constructor({ parent, position = [0, 0, 0], core = '#c9b8a3', base = '#0b0a09', variant = 'ale', scale = 1 } = {}) {
     this.group = new THREE.Group();
     this.group.position.set(...position);
     this.group.scale.setScalar(scale);
@@ -40,90 +42,83 @@ class Entity {
     this.reaction = 0;
     this.meet = 0;
     this.variant = variant;
+    const variantN = variant === 'kim' ? 1 : 0;
 
-    this.material = makeEntityMaterial(base, core);
-    this.glossMaterial = makeEntityMaterial('#0c0b0b', core);
-    this.materials = [this.material, this.glossMaterial];
+    this.material = makeEntityMaterial(base, core, variantN);
+    this.extensionMaterial = makeEntityMaterial('#0a0908', core, variantN + .35);
+    this.materials = [this.material, this.extensionMaterial];
 
-    const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.85, 5), this.material);
-    body.scale.set(1.12, 1.55, 0.95);
-    body.position.set(0, 1.15, 0);
+    // One dominant continuous sculptural body: a lathed biomorphic monolith,
+    // deformed in shader so it never reads as a humanoid assembled from primitives.
+    const profile = variant === 'kim'
+      ? [[0.10,-1.35],[0.42,-1.22],[0.68,-.82],[0.76,-.22],[0.72,.32],[0.78,.92],[0.63,1.55],[0.43,2.03],[0.26,2.36],[0.11,2.52]]
+      : [[0.12,-1.35],[0.48,-1.18],[0.73,-.72],[0.79,-.10],[0.66,.48],[0.82,1.02],[0.58,1.62],[0.46,2.08],[0.23,2.38],[0.09,2.52]];
+    const lathePts = profile.map(([r,y]) => new THREE.Vector2(r,y));
+    this.body = new THREE.Mesh(new THREE.LatheGeometry(lathePts, 56), this.material);
+    this.body.scale.set(1.16, 1.0, .86);
+    this.body.rotation.y = variant === 'kim' ? .26 : -.20;
+    this.visual.add(this.body);
 
-    const belly = new THREE.Mesh(new THREE.IcosahedronGeometry(0.78, 4), this.material);
-    belly.scale.set(1.0, 0.92, 0.88);
-    belly.position.set(variant === 'kim' ? 0.18 : -0.18, 0.55, 0.02);
-
-    const shoulder = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 4), this.glossMaterial);
-    shoulder.scale.set(0.95, 0.72, 0.72);
-    shoulder.position.set(variant === 'kim' ? -0.18 : 0.18, 1.95, 0.0);
-
-    const lower = new THREE.Mesh(new THREE.IcosahedronGeometry(0.58, 4), this.glossMaterial);
-    lower.scale.set(0.84, 0.78, 0.78);
-    lower.position.set(variant === 'kim' ? 0.12 : -0.12, -0.15, 0.03);
-
-    this.visual.add(body, belly, shoulder, lower);
-
-    this.armPivot = new THREE.Group();
-    this.armPivot.position.set(variant === 'kim' ? -0.75 : 0.75, 1.2, 0.0);
-    this.armPivot.rotation.z = variant === 'kim' ? 0.4 : -0.4;
-    this.visual.add(this.armPivot);
-
-    this.arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 1.25, 8, 16), this.material);
-    this.arm.rotation.z = Math.PI / 2;
-    this.arm.position.x = variant === 'kim' ? -0.78 : 0.78;
-    this.armPivot.add(this.arm);
-
-    this.hand = new THREE.Mesh(new THREE.IcosahedronGeometry(0.24, 2), this.glossMaterial);
-    this.hand.position.x = variant === 'kim' ? -1.52 : 1.52;
-    this.armPivot.add(this.hand);
-
+    // A subtle carved opening hints at luminous matter without becoming a literal heart.
     this.inner = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.8, 3),
-      new THREE.MeshBasicMaterial({ color: core, transparent: true, opacity: 0.04, blending: THREE.AdditiveBlending, depthWrite: false })
+      new THREE.SphereGeometry(.42, 24, 18),
+      new THREE.MeshBasicMaterial({ color: core, transparent: true, opacity: .018, blending: THREE.AdditiveBlending, depthWrite: false })
     );
-    this.inner.position.set(0, 1.0, 0.04);
-    this.inner.scale.set(0.85, 1.2, 0.75);
+    this.inner.position.set(variant === 'kim' ? -.13 : .12, .78, .18);
+    this.inner.scale.set(.75, 1.25, .42);
     this.visual.add(this.inner);
 
-    const pCount = 110;
+    // The contact appendage exists only while matter reaches toward the other entity.
+    this.armPivot = new THREE.Group();
+    this.armPivot.position.set(variant === 'kim' ? -.48 : .48, .92, .02);
+    this.visual.add(this.armPivot);
+    this.extension = new THREE.Mesh(new THREE.CapsuleGeometry(.13, 1.22, 10, 18), this.extensionMaterial);
+    this.extension.rotation.z = Math.PI / 2;
+    this.extension.position.x = variant === 'kim' ? -.72 : .72;
+    this.extension.scale.set(.001, .001, .001);
+    this.armPivot.add(this.extension);
+    this.hand = new THREE.Mesh(new THREE.SphereGeometry(.17, 18, 14), this.extensionMaterial);
+    this.hand.position.x = variant === 'kim' ? -1.38 : 1.38;
+    this.hand.scale.setScalar(.001);
+    this.armPivot.add(this.hand);
+
+    const pCount = 128;
     const pArr = new Float32Array(pCount * 3);
     this.particleBase = [];
     for (let i = 0; i < pCount; i++) {
       const a = Math.random() * Math.PI * 2;
-      const r = 0.3 + Math.random() * 1.05;
-      const p = new THREE.Vector3(Math.cos(a) * r * 0.6, (Math.random() - 0.2) * 3.4 + 0.9, Math.sin(a) * r * 0.34);
+      const r = .34 + Math.random() * .88;
+      const p = new THREE.Vector3(Math.cos(a) * r * .52, (Math.random() - .18) * 3.25 + .2, Math.sin(a) * r * .30);
       this.particleBase.push(p);
-      pArr.set([p.x, p.y, p.z], i * 3);
+      pArr.set([p.x,p.y,p.z], i*3);
     }
     this.particleGeo = new THREE.BufferGeometry();
-    this.particleGeo.setAttribute('position', new THREE.BufferAttribute(pArr, 3));
-    this.particleMat = new THREE.PointsMaterial({ color: core, size: 0.028, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.particleGeo.setAttribute('position', new THREE.BufferAttribute(pArr,3));
+    this.particleMat = new THREE.PointsMaterial({ color: core, size: .022, transparent: true, opacity: variant === 'ale' ? .11 : .065, depthWrite: false, blending: THREE.AdditiveBlending });
     this.particles = new THREE.Points(this.particleGeo, this.particleMat);
     this.visual.add(this.particles);
   }
 
-  handWorld() {
-    return this.hand.getWorldPosition(new THREE.Vector3());
-  }
+  handWorld() { return this.hand.getWorldPosition(new THREE.Vector3()); }
 
   update(t, reaction = this.reaction, meet = this.meet) {
-    this.reaction = THREE.MathUtils.lerp(this.reaction, reaction, 0.07);
-    this.meet = THREE.MathUtils.lerp(this.meet, meet, 0.07);
+    this.reaction = THREE.MathUtils.lerp(this.reaction, reaction, .055);
+    this.meet = THREE.MathUtils.lerp(this.meet, meet, .06);
     this.materials.forEach((m, idx) => {
-      m.uniforms.uTime.value = t * (idx ? 0.93 : 1.0);
-      m.uniforms.uReaction.value = this.reaction * 0.85 + this.meet * 0.6;
+      m.uniforms.uTime.value = t * (idx ? .91 : 1);
+      m.uniforms.uReaction.value = this.reaction * .82 + this.meet * .52;
     });
 
-    this.visual.position.y = 0.96 + Math.sin(t * 0.9 + this.group.position.x * 0.08) * 0.12 + this.reaction * 0.03;
-    this.visual.rotation.y = Math.sin(t * 0.36 + this.group.position.z * 0.05) * 0.08;
-    this.visual.rotation.z = Math.sin(t * 0.55 + this.group.position.x * 0.09) * 0.035;
-    this.inner.material.opacity = 0.03 + this.reaction * 0.12 + this.meet * 0.13;
-    const pulse = 1 + Math.sin(t * 1.6 + (this.variant === 'kim' ? 0.6 : 0)) * 0.08 + this.reaction * 0.05 + this.meet * 0.1;
-    this.inner.scale.set(0.85 * pulse, 1.2 * pulse, 0.75 * pulse);
-    this.particleMat.opacity = 0.11 + this.reaction * 0.42 + this.meet * 0.15;
+    this.visual.position.y = 1.34 + Math.sin(t*.67 + this.group.position.x*.08)*.075;
+    this.visual.rotation.z = Math.sin(t*.31 + (this.variant==='kim'?1.2:0))*.035;
+    this.visual.rotation.y += Math.sin(t*.23 + this.group.position.z*.03)*.0007;
+    const breathe = 1 + Math.sin(t*.88 + (this.variant==='kim'?.8:0))*.018 + this.reaction*.016;
+    this.body.scale.set(1.16*breathe, 1/breathe*.998, .86*breathe);
+    this.inner.material.opacity = .012 + this.reaction*.055 + this.meet*.12;
+    this.inner.scale.set(.75*(1+this.meet*.12),1.25*(1+this.reaction*.08),.42);
 
-    const armReach = 1 + this.meet * 0.75;
-    this.arm.scale.set(1, 1, armReach);
-    this.arm.position.x = (this.variant === 'kim' ? -0.78 : 0.78) * (0.8 + this.meet * 0.28);
-    this.hand.position.x = (this.variant === 'kim' ? -1.52 : 1.52) * armReach;
-    this.armPivot.rotation.z = THREE.MathUtils.lerp(this.armPivot.rotation.z, (this.variant === 'kim' ? 0.38 : -0.38) + (this.variant === 'kim' ? -1 : 1) * this.meet * 0.18, 0.0
+    const reach = smoother(this.meet);
+    const exScale = Math.max(.001, reach);
+    this.extension.scale.set(exScale, exScale, .62 + reach*.72);
+    this.hand.scale.setScalar(exScale);
+    this.armPivot.rotation.z = (this.variant==='kim' ? .10 : -.10) + (this.variant==='kim' ? -.12 : .12)*reach;
