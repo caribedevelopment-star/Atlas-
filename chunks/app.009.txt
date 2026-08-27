@@ -1,0 +1,111 @@
+=true;
+  }
+  portalCam.position.x=THREE.MathUtils.clamp(camera.position.x*.08,-.6,.6);
+  portalCam.position.y=2.5+THREE.MathUtils.clamp((camera.position.y-3)*.035,-.18,.22);
+  portalCam.lookAt(portalCam.position.x*.08,1.5,-12);
+  renderer.setRenderTarget(portalTarget);renderer.render(portalScene,portalCam);renderer.setRenderTarget(null);
+}
+
+function updatePortalFlow(t,intensity=1){
+  const attr=portalFlowGeo.attributes.position;
+  for(let i=0;i<portalFlowBase.length;i++){
+    const b=portalFlowBase[i];
+    const flow=Math.sin(t*.7+i*.17+b.y*.9)+Math.cos(t*.31+b.x*.8-i*.07);
+    attr.setXYZ(i,b.x+flow*.055*intensity,b.y+Math.sin(t*.44+i*.11)*.045*intensity,b.z+Math.cos(t*.52+i*.13)*.12*intensity);
+  }
+  attr.needsUpdate=true;
+  portalFlowMat.opacity=.12+intensity*.18;
+}
+
+function updateRoom(t,dt){
+  movePlayer(dt,{x0:-10,x1:10,z0:-13.2,z1:11});
+  roomAle.update(t,.14,0);roomKim.update(t,.18,0);
+  if(phase==='room')roomKim.group.position.lerp(roomAle.group.position.clone().add(new THREE.Vector3(2.1,0,-2.0)),.008);
+  const doorDist=roomAle.group.position.distanceTo(new THREE.Vector3(0,0,-13.5));
+  const portalLife=.5+Math.sin(t*.62)*.5;
+  portalVeil.material.opacity=.035+portalLife*.045;
+  portalHalo.intensity=38+portalLife*24+(phase==='portal_cinematic'?phaseTime()*8:0);
+  roomBackLight.intensity=6+portalLife*3;
+  updatePortalFlow(t,phase==='portal_cinematic'?1.8:1);
+  updatePortalPreview(t);
+  if(phase==='room'){
+    if(doorDist<6.2)setHint('LA PRADERA ESTÁ AL OTRO LADO');
+    if(doorDist<3.7)beginPortalCinematic();
+  } else if(phase==='portal_cinematic'){
+    const p=smoother(phaseTime()/3.85);
+    portalVeil.material.opacity=.05+p*.14;
+    portalFlowMat.size=.035+p*.035;
+    roomGlow.intensity=14*(1-p*.72);
+    roomBackLight.intensity=7+p*10;
+    if(phaseTime()>3.9)startTunnel();
+  }
+}
+
+function updateTunnel(t){
+  const p=phaseTime();
+  camera.position.set(Math.sin(p*.47)*.36,Math.sin(p*.61)*.22,3.4-p*14.2);
+  camera.rotation.z=Math.sin(p*.75)*.055;
+  camera.fov=56+Math.sin(p*.9)*4;camera.updateProjectionMatrix();
+  tunnelParticles.rotation.z=p*.055;tunnelLavParticles.rotation.z=-p*.035;
+  tunnelParticles.position.z=(p*5)%8;tunnelLavParticles.position.z=(p*3)%6;
+  tunnelLines.forEach((l,i)=>{l.rotation.z=Math.sin(t*.23+i)*.14;l.material.opacity=.045+Math.max(0,Math.sin(t*1.5+i*.7))*.09});
+  tunnelFragments.forEach((m,i)=>{
+    m.rotation.x+=.002+i*.00004;m.rotation.y+=.003*(i%3+1);m.position.x+=Math.sin(t*.5+i)*.0015;
+    if(m.material.opacity!==undefined)m.material.opacity=(i%4===0?.08:.045)+Math.max(0,Math.sin(t*1.1+i))*.11;
+  });
+}
+
+function updateMeadowSeasons(t){
+  const zProg=clamp01((14-meadowAle.group.position.z)/58);
+  const together=1-clamp01((meadowAle.group.position.distanceTo(meadowKim.group.position)-1.7)/6.5);
+  worldProgress=THREE.MathUtils.lerp(worldProgress,zProg*.82+together*.18,.026);
+
+  const desert=1-smooth(worldProgress*1.18);
+  const winter=smooth((worldProgress-.11)/.20)*(1-smooth((worldProgress-.39)/.16));
+  const spring=smooth((worldProgress-.34)/.24);
+  const lavenderPhase=smooth((worldProgress-.58)/.32);
+
+  dryMat.opacity=.16+desert*.52;
+  snowMat.opacity=winter*.72;
+  grassMat.opacity=spring*.74;
+  lavStemMat.opacity=lavenderPhase*.86;
+  lavBudMatA.opacity=lavenderPhase*.94;lavBudMatB.opacity=lavenderPhase*.9;lavBudMatC.opacity=lavenderPhase*.84;
+  meadowDust.material.opacity=.04+desert*.24;
+  meadowSnow.material.opacity=winter*.42;
+  meadowWarm.material.opacity=lavenderPhase*.36;
+  meadowSky.material.uniforms.uTime.value=t;meadowSky.material.uniforms.uSeason.value=worldProgress*3.15;meadowSky.material.uniforms.uCloud.value=.34+winter*.46+lavenderPhase*.16;
+
+  meadowFloorMat.color.lerp(worldProgress<.15?new THREE.Color('#8d7258'):worldProgress<.38?new THREE.Color('#d7dad9'):worldProgress<.68?new THREE.Color('#657b56'):new THREE.Color('#748b5b'),.026);
+  meadowHemi.intensity=.88+spring*.55+lavenderPhase*.45;
+  meadowSun.intensity=1.45+spring*.72+lavenderPhase*1.15;
+  meadowSun.color.lerp(worldProgress<.35?new THREE.Color('#e8dfd5'):new THREE.Color('#ffd09a'),.025);
+  scene.fog.color.lerp(worldProgress<.18?new THREE.Color('#b6aea4'):worldProgress<.4?new THREE.Color('#d8dfe1'):worldProgress<.72?new THREE.Color('#bfcbbd'):new THREE.Color('#e8c8a5'),.025);
+  scene.fog.density=.018-winter*.002-lavenderPhase*.004;
+
+  if(worldProgress<.12)setHint('DESIERTO · EL VIENTO MUEVE EL POLVO');
+  else if(worldProgress<.38)setHint('INVIERNO · TODO SE DETIENE');
+  else if(worldProgress<.68)setHint('LA VIDA SE PROPAGA A VUESTRO ALREDEDOR');
+  else if(worldProgress<.94)setHint('PRIMAVERA · LA LAVANDA DESPIERTA');
+  else setHint('ACÉRCATE A ELLA');
+
+  return {desert,winter,spring,lavenderPhase};
+}
+
+function updateMeadow(t,dt){
+  movePlayer(dt,{x0:-17,x1:17,z0:-60,z1:16});
+  meadowAle.update(t,.12+worldProgress*.30,0);meadowKim.update(t,.17+worldProgress*.28,0);
+  const desiredKim=meadowAle.group.position.clone().add(new THREE.Vector3(1.9,0,-2.7));meadowKim.group.position.lerp(desiredKim,.0105);
+  const seasons=updateMeadowSeasons(t);
+  if(frame%2===0)updateLavenderInstances(t,.45+seasons.lavenderPhase*1.35,0,0);
+
+  const gWind=windField(meadowAle.group.position.x,meadowAle.group.position.z,t,.65+seasons.spring*.7);
+  grass.rotation.z=gWind.x*.12;dryStems.rotation.z=gWind.x*.08;
+  meadowWarm.rotation.y+=.001+gWind.gust*.0008;meadowWarm.position.x=Math.sin(t*.13)*.45;
+  meadowSnow.position.y=Math.sin(t*.21)*.18;meadowSnow.rotation.y=t*.008;
+
+  // TouchDesigner-like flow field: particles are nudged by a spatial vector field, not uniform drift.
+  const warmAttr=meadowWarm.geometry.attributes.position;
+  if(warmAttr&&frame%2===0){for(let i=0;i<warmAttr.count;i++){const x=warmAttr.getX(i),y=warmAttr.getY(i),z=warmAttr.getZ(i);const w=windField(x,z,t+i*.013,.32+seasons.lavenderPhase*.6);warmAttr.setXYZ(i,x+w.x*.025,y+Math.sin(t*.3+i*.09)*.006,z+w.z*.018)}warmAttr.needsUpdate=true;}
+
+  const close=meadowAle.group.position.distanceTo(meadowKim.group.position)<2.55;
+  if(worldProgress>.97
