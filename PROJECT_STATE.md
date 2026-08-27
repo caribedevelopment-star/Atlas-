@@ -1,40 +1,30 @@
-# Al.Kim.ia — Project State (V4 rebuild)
+# Al.Kim.ia — Project State
 
-## Current playable flow
-1. **Memory 01 — The Encounter**
-   - larger concert space
-   - brighter central orb
-   - denser crowd
-   - stylized, thicker abstract entities
-   - RAWA sign on stage
-   - touch-driven meeting transition
+STATUS: V05 production foundation
+PLATFORM: Browser / PWA / Vercel
 
-2. **Memory 02 — The Room**
-   - darker, quieter architectural room
-   - portal showing a preview of the meadow beyond
-   - approach-triggered transition
+## Playable chronology
+1. Memory 01 — The Encounter
+2. Memory 02 — The Room / Portal
+3. Memory transition — Memory Tunnel
+4. Memory 03 — The Meadow
+5. Memory 04 — The Ascension
 
-3. **Temporal Tunnel**
-   - cinematic time-tunnel transition between room and meadow
+## V05 changes
+- entities rebuilt as more continuous biomorphic matte sculptures
+- real-time portal render target showing a living meadow beyond the room
+- portal cinematic with camera takeover and first-person-style crossing
+- memory tunnel rebuilt without sci-fi torus rings
+- procedural atmospheric sky and visible weather states
+- non-flat meadow terrain with atmospheric depth
+- lavender rebuilt from stems + clustered polygonal flower heads
+- spatial wind field with gusts across vegetation and particles
+- TouchDesigner-inspired flow fields used selectively in portal, meadow and ascent
+- lavender disintegrates into thousands of flower particles during Ascension
+- Ascension camera now uses a deliberate sequence of close/orbit/wide/crane shots
 
-4. **Memory 03 — The Meadow**
-   - interactive progression through seasons
-   - desert -> winter -> green -> lavender
-   - suspended particles and warmer light as lavender appears
+## Quality direction
+Materiality, atmosphere and cinematography take priority over features. The target is a browser-real-time piece that borrows Unreal-like lighting/scale and TouchDesigner-like generative behavior without becoming a game UI or neon visualizer.
 
-5. **Ascension**
-   - triggered in the lavender state when Ale and Kim are close
-   - lavender rises particle-by-particle
-   - Ale and Kim begin ascending toward the sky
-
-## Focus of this rebuild
-- improve perceived quality
-- improve silhouette and motion of the entities
-- improve transitions and scene pacing
-- strengthen spatial atmosphere and progression
-
-## Still recommended next
-- beat-reactive lighting/audio when user provides music file
-- more refined portal shader / meadow vista
-- stronger cinematic close-up at first touch
-- post-processing pipeline if moving to a bundler setup
+## Next production tasks for Codex
+See `CODEX_HANDOFF.md` and `docs/VISUAL_DIRECTION_V5.md`.
