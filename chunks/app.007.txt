@@ -1,0 +1,110 @@
+roup.position, 0.5).add(new THREE.Vector3(0, 2.2, 0)), 0.07);
+  intimateLight.intensity = proximity * 42 + touchMix * 25;
+
+  concertDust.rotation.y = t * 0.012;
+  concertDust.position.y = Math.sin(t * 0.14) * 0.24;
+  stageBars.forEach((b, i) => { b.material.opacity = 0.28 + Math.max(0, Math.sin(t * 6.0 + i * 0.4)) * 0.7; });
+  concertBeams.forEach((b, i) => { b.rotation.y = Math.sin(t * 0.46 + i * 0.2) * 0.55; b.material.opacity = 0.02 + Math.max(0, Math.sin(t * 3.8 + i)) * 0.038; });
+  const orbPulse = 1 + Math.sin(t * 1.8) * 0.026 + proximity * 0.04;
+  orb.scale.setScalar(orbPulse); orbLight.intensity = 1030 + Math.max(0, Math.sin(t * 2.1)) * 280 + proximity * 150;
+  orbHalos.forEach((h, i) => h.scale.setScalar(1 + Math.sin(t * (0.44 + i * 0.06) + i) * (0.05 + i * 0.015)));
+
+  if (phase === 'concert' && d < 2.3) {
+    setPhase('concert_touch');
+    setHint('');
+  }
+  if (phase === 'concert_touch') {
+    const mid = concertAle.group.position.clone().lerp(concertKim.group.position, 0.5);
+    concertAle.group.position.lerp(new THREE.Vector3(mid.x - 0.9, 0, mid.z + 0.04), 0.03);
+    concertKim.group.position.lerp(new THREE.Vector3(mid.x + 0.9, 0, mid.z - 0.04), 0.03);
+    if (phaseTime() > 3.2) startRoom();
+  }
+}
+
+function updateRoom(t, dt) {
+  movePlayer(dt, { x0: -9, x1: 9, z0: -11, z1: 10.8 });
+  roomAle.update(t, 0.16, 0); roomKim.update(t, 0.2, 0);
+  const roomD = roomAle.group.position.distanceTo(roomKim.group.position);
+  roomKim.group.position.lerp(roomAle.group.position.clone().add(new THREE.Vector3(2.1, 0, -2)), 0.01);
+  const doorDist = roomAle.group.position.distanceTo(new THREE.Vector3(0, 0, -12.2));
+  const portalLife = 0.5 + Math.sin(t * 0.7) * 0.5;
+  previewLav.material.opacity = 0.15 + portalLife * 0.5;
+  portalPlane.material.opacity = 0.15 + portalLife * 0.15;
+  portalHalo.intensity = 40 + portalLife * 22;
+  previewDust.material.opacity = 0.12 + portalLife * 0.14;
+  const previewSeason = (Math.sin(t * 0.35) + 1) * 0.5;
+  previewGround.material.color.lerp(new THREE.Color(previewSeason > 0.5 ? '#6f8b59' : '#8c775e'), 0.04);
+  if (roomD < 2.6) setHint('ACÉRCATE AL PORTAL');
+  if (doorDist < 2.5) startTunnel();
+}
+
+function updateTunnel(t) {
+  const p = phaseTime();
+  camera.position.set(Math.sin(p * 0.22) * 0.25, Math.sin(p * 0.4) * 0.18, 4 - p * 10.5);
+  camera.rotation.z = Math.sin(p * 0.8) * 0.07;
+  tunnelRings.forEach((r, i) => {
+    r.rotation.z += 0.01 * (1 + (i % 3) * 0.18);
+    r.material.opacity = 0.08 + Math.max(0, Math.sin(t * 2 + i * 0.45)) * 0.18;
+  });
+  tunnelParticles.rotation.z = p * 0.06;
+}
+
+function updateMeadowSeasons(t) {
+  const zProg = clamp01((14 - meadowAle.group.position.z) / 48);
+  const together = 1 - clamp01((meadowAle.group.position.distanceTo(meadowKim.group.position) - 1.8) / 6);
+  worldProgress = THREE.MathUtils.lerp(worldProgress, zProg * 0.8 + together * 0.2, 0.03);
+
+  const desert = 1 - smooth(worldProgress * 1.1);
+  const winter = smooth((worldProgress - 0.12) / 0.22) * (1 - smooth((worldProgress - 0.43) / 0.18));
+  const spring = smooth((worldProgress - 0.38) / 0.22);
+  const lavenderPhase = smooth((worldProgress - 0.62) / 0.28);
+
+  dryMat.opacity = 0.2 + desert * 0.42;
+  snowMat.opacity = winter * 0.62;
+  grassMat.opacity = spring * 0.75;
+  lavMat.opacity = lavenderPhase * 0.94;
+  meadowDust.material.opacity = 0.06 + desert * 0.22;
+  meadowSnow.material.opacity = winter * 0.38;
+  meadowWarm.material.opacity = lavenderPhase * 0.34;
+
+  meadowFloorMat.color.lerp(
+    worldProgress < 0.15 ? new THREE.Color('#8e755b') : worldProgress < 0.38 ? new THREE.Color('#d9dcdd') : worldProgress < 0.7 ? new THREE.Color('#697f56') : new THREE.Color('#7a9060'),
+    0.025
+  );
+  horizon.material.color.lerp(worldProgress < 0.18 ? new THREE.Color('#c5b9aa') : worldProgress < 0.38 ? new THREE.Color('#dfe5e8') : worldProgress < 0.72 ? new THREE.Color('#c8d0c7') : new THREE.Color('#f3d8b6'), 0.03);
+  meadowHemi.intensity = 0.9 + spring * 0.55 + lavenderPhase * 0.4;
+  meadowSun.intensity = 1.6 + spring * 0.6 + lavenderPhase * 0.85;
+  scene.fog.color.lerp(worldProgress < 0.18 ? new THREE.Color('#b9b3ab') : worldProgress < 0.38 ? new THREE.Color('#dce2e5') : worldProgress < 0.72 ? new THREE.Color('#c7d1c6') : new THREE.Color('#efd2b1'), 0.03);
+  scene.background.lerp(worldProgress < 0.18 ? new THREE.Color('#b8b0a7') : worldProgress < 0.38 ? new THREE.Color('#e1e6e8') : worldProgress < 0.72 ? new THREE.Color('#c8d0cb') : new THREE.Color('#f1d5b7'), 0.02);
+
+  if (worldProgress < 0.12) setHint('DEL DESIERTO HACIA EL INVIERNO');
+  else if (worldProgress < 0.38) setHint('TODO SE DETIENE');
+  else if (worldProgress < 0.7) setHint('EL MUNDO RECUERDA CÓMO ESTAR VIVO');
+  else if (worldProgress < 0.94) setHint('LA LAVANDA DESPIERTA');
+  else setHint('ACÉRCATE A ELLA PARA ASCENDER');
+
+  return { winter, spring, lavenderPhase };
+}
+
+function updateMeadow(t, dt) {
+  movePlayer(dt, { x0: -14, x1: 14, z0: -52, z1: 16 });
+  meadowAle.update(t, 0.14 + worldProgress * 0.32, 0);
+  meadowKim.update(t, 0.18 + worldProgress * 0.3, 0);
+  const desiredKim = meadowAle.group.position.clone().add(new THREE.Vector3(1.9, 0, -2.6));
+  meadowKim.group.position.lerp(desiredKim, 0.012);
+  const seasons = updateMeadowSeasons(t);
+
+  const sway = 1 + Math.sin(t * 0.8) * 0.06;
+  dryStems.rotation.z = Math.sin(t * 0.24) * 0.01;
+  grass.scale.y = sway;
+  lavender.scale.y = 1 + seasons.lavenderPhase * 0.06 + Math.sin(t * 0.9) * 0.02;
+  meadowWarm.rotation.y = t * 0.016;
+  meadowSnow.position.y = Math.sin(t * 0.3) * 0.12;
+
+  const close = meadowAle.group.position.distanceTo(meadowKim.group.position) < 2.6;
+  if (worldProgress > 0.97 && close) beginAscension();
+}
+
+function updateAscension(t) {
+  ascendMix = smoother(phaseTime() / 8.5);
+  meadowAle.group.position.x = THREE.MathUtils.lerp(meadowAle.group.positi
