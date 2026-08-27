@@ -1,18 +1,18 @@
-5);
+
 
     const attr = this.particleGeo.attributes.position;
-    for (let i = 0; i < this.particleBase.length; i++) {
-      const b = this.particleBase[i];
-      const drift = this.reaction * 0.18 + this.meet * 0.15;
-      attr.setXYZ(
-        i,
-        b.x + Math.sin(t * 0.7 + i * 0.9) * drift,
-        b.y + Math.sin(t * 0.53 + i * 1.12) * drift * 2.0,
-        b.z + Math.cos(t * 0.64 + i * 0.66) * drift
+    const escape = this.variant === 'ale' ? (.035 + this.reaction*.11) : (.018 + this.reaction*.055);
+    for (let i=0;i<this.particleBase.length;i++) {
+      const b=this.particleBase[i];
+      const field = Math.sin(t*.43 + i*.77 + b.y*1.7) + Math.cos(t*.29 + i*.31 + b.x*2.1);
+      attr.setXYZ(i,
+        b.x + Math.sin(t*.51+i*.91)*escape,
+        b.y + field*escape*.42 + this.reaction*escape*(i%9===0?.9:0),
+        b.z + Math.cos(t*.46+i*.61)*escape*.65
       );
     }
-    attr.needsUpdate = true;
-    this.particles.rotation.y += 0.0012 + this.reaction * 0.0025;
+    attr.needsUpdate=true;
+    this.particleMat.opacity = (this.variant==='ale'?.08:.05) + this.reaction*(this.variant==='ale'?.32:.18) + this.meet*.13;
   }
 }
 
@@ -123,4 +123,4 @@ function ambientPoints(count, area, color, size, opacity, parent) {
   const mat = new THREE.PointsMaterial({ color, size, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
   const pts = new THREE.Points(geo, mat); parent.add(pts); return pts;
 }
-const conce
+const concertDust = ambientPoints(900, { x
