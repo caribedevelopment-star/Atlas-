@@ -2,34 +2,57 @@
 
 A private browser-first cinematic 3D experience built as a sequence of emotional memories.
 
-## Current build
+## Prototype 03
 
-### Memory 01 — The Encounter
-An abstract concert arena inspired by the real meeting: a very bright suspended sphere, dense moving crowd, warm red/orange live lighting, and two malleable sculptural entities. Only Ale is controlled. As he finds Kim inside the crowd, the environment isolates their meeting.
+Current playable flow:
 
-### Memory 02 — The Room / The Door
-The concert dissolves into a quiet architectural interior. Movement returns after a cinematic transition. Approaching the glowing door triggers the next narrative threshold.
+1. **Memory 01 — The Encounter**
+   - Large abstract concert arena
+   - Animated crowd
+   - Giant glowing sphere
+   - RAWA stage sign
+   - Ale finds Kim inside the noise
+   - Their sculptural malleable hands meet and trigger the transition
 
-## Controls
+2. **Memory 02 — The Room**
+   - Quiet architectural interior
+   - Both entities remain present
+   - A luminous door becomes the next emotional threshold
 
-Desktop:
-- WASD / arrows: move
-- drag mouse: look around
+3. **Time Tunnel**
+   - The door becomes a cinematic tunnel through memory/time
 
-Mobile:
-- touch and drag on the left half: floating movement joystick
-- touch and drag on the right half: look around
+4. **Memory 03 — The Awakening**
+   - A dry world gradually regains green and lavender as Ale advances with Kim
 
-Movement is camera-relative.
+## Core rules
+
+- Only Ale is directly controlled.
+- Kim is a narrative companion, not a second player.
+- Entities are thick, sculptural, malleable matter rather than conventional humanoids.
+- Progress happens through movement, proximity and contact — never through generic Next buttons.
+- **Al.Kim.ia** is the visual identity throughout the entire experience.
+
+## Stack
+
+- Three.js / WebGL
+- Static browser-first architecture
+- PWA manifest + service worker
+- GitHub source of truth
+- Vercel deployments
 
 ## Audio
 
-The repository does **not** include copyrighted commercial music. The prototype optionally looks for a privately supplied file at:
+Commercial music is intentionally not included in the repository. For private testing with a lawful local copy, place the desired file at:
 
 `/audio/rawayana.mp3`
 
-If it is absent, the experience uses a synthetic concert ambience.
+The experience tries that file after ENTER and otherwise falls back to a synthetic concert atmosphere.
 
-## Deployment
+## Controls
 
-Static Three.js/PWA project, ready for Vercel.
+Desktop: WASD / arrows to move, drag on the world to rotate the camera.
+
+Mobile: floating joystick on the left side, drag on the right side to look.
+
+See `PROJECT_STATE.md` and `AGENTS.md` before significant changes.
