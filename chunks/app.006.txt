@@ -1,0 +1,111 @@
+
+}
+addEventListener('keydown', (e) => { key(e, true); if (e.key.startsWith('Arrow')) e.preventDefault(); if (started) hint.style.opacity = '.25'; }, { passive: false });
+addEventListener('keyup', (e) => key(e, false));
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.48) {
+    joyPointer = e.pointerId; joyOrigin.set(e.clientX, e.clientY);
+    joystick.style.left = `${e.clientX - 60}px`; joystick.style.top = `${e.clientY - 60}px`; joystick.style.bottom = 'auto'; joystick.classList.remove('hidden');
+    return;
+  }
+  lookPointer = e.pointerId; lastLook.set(e.clientX, e.clientY);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerId === joyPointer) {
+    const dx = e.clientX - joyOrigin.x, dy = e.clientY - joyOrigin.y;
+    const len = Math.min(46, Math.hypot(dx, dy)); const a = Math.atan2(dy, dx);
+    mobileAxis.set(Math.cos(a) * len / 46, -Math.sin(a) * len / 46);
+    joystickKnob.style.transform = `translate(${Math.cos(a) * len}px,${Math.sin(a) * len}px)`;
+  } else if (e.pointerId === lookPointer) {
+    const dx = e.clientX - lastLook.x, dy = e.clientY - lastLook.y;
+    cameraYaw -= dx * 0.0048;
+    cameraPitch = THREE.MathUtils.clamp(cameraPitch - dy * 0.0035, -0.16, 0.58);
+    lastLook.set(e.clientX, e.clientY);
+  }
+});
+function releasePointer(e) {
+  if (e.pointerId === joyPointer) {
+    joyPointer = null; mobileAxis.set(0, 0); joystickKnob.style.transform = 'translate(0,0)'; joystick.classList.add('hidden');
+  }
+  if (e.pointerId === lookPointer) lookPointer = null;
+}
+canvas.addEventListener('pointerup', releasePointer);
+canvas.addEventListener('pointercancel', releasePointer);
+
+function movementVector() {
+  const x = (keyboard.right ? 1 : 0) - (keyboard.left ? 1 : 0) + mobileAxis.x;
+  const z = (keyboard.back ? 1 : 0) - (keyboard.forward ? 1 : 0) - mobileAxis.y;
+  tmp.set(x, 0, z);
+  if (tmp.lengthSq() > 1) tmp.normalize();
+  camForward.set(Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+  camRight.set(Math.cos(cameraYaw), 0, Math.sin(cameraYaw));
+  return new THREE.Vector3().addScaledVector(camForward, -tmp.z).addScaledVector(camRight, tmp.x);
+}
+function movePlayer(dt, bounds) {
+  if (!currentPlayer || transitioning || phase === 'tunnel' || phase === 'ascension' || phase === 'concert_touch') return;
+  const v = movementVector();
+  if (v.lengthSq() > 0.01) {
+    v.normalize();
+    currentPlayer.group.position.addScaledVector(v, dt * 3.7);
+    currentPlayer.group.rotation.y = THREE.MathUtils.lerp(currentPlayer.group.rotation.y, Math.atan2(v.x, v.z), 0.08);
+  }
+  currentPlayer.group.position.x = THREE.MathUtils.clamp(currentPlayer.group.position.x, bounds.x0, bounds.x1);
+  currentPlayer.group.position.z = THREE.MathUtils.clamp(currentPlayer.group.position.z, bounds.z0, bounds.z1);
+}
+
+// ---------- SCENE FLOW ----------
+async function startRoom() {
+  if (transitioning) return;
+  transitioning = true; fadeToBlack(true); audioSystem?.fade?.(0.15); await wait(900);
+  concertRoot.visible = false; roomRoot.visible = true; tunnelRoot.visible = false; meadowRoot.visible = false;
+  scene.background.set('#080605'); scene.fog = new THREE.FogExp2('#0a0807', 0.03);
+  currentPlayer = roomAle; currentKim = roomKim; roomAle.group.position.set(-0.9, 0, 9); roomKim.group.position.set(1.6, 0, 7.1);
+  cameraYaw = 0; cameraPitch = 0.18; proximity = 0; proximityBar.style.transform = 'scaleX(0)'; setPhase('room');
+  fadeToBlack(false); showChapter('MEMORY 02', 'THE ROOM', 2200); setHint('ACÉRCATE AL PORTAL');
+  await wait(400); transitioning = false;
+}
+
+async function startTunnel() {
+  if (transitioning) return;
+  transitioning = true; setPhase('tunnel'); fadeToBlack(true); await wait(650);
+  roomRoot.visible = false; tunnelRoot.visible = true; scene.background.set('#020202'); scene.fog = null; fadeToBlack(false);
+  await wait(3400);
+  fadeToBlack(true); await wait(780);
+  tunnelRoot.visible = false; meadowRoot.visible = true; scene.background.set('#b7c1c8'); scene.fog = new THREE.FogExp2('#aeb8bf', 0.015);
+  currentPlayer = meadowAle; currentKim = meadowKim;
+  meadowAle.group.position.set(-1.2, 0, 14.8); meadowKim.group.position.set(1.3, 0, 12.6);
+  cameraYaw = 0; cameraPitch = 0.2; worldProgress = 0; ascendMix = 0; setPhase('meadow'); proximityBar.style.transform = 'scaleX(0)';
+  fadeToBlack(false); hud.classList.remove('hidden'); showChapter('MEMORY 03', 'THE MEADOW', 2400); setHint('CAMINA CON ELLA HACIA LA PRADERA');
+  transitioning = false;
+}
+
+function beginAscension() {
+  if (phase === 'ascension' || transitioning) return;
+  setPhase('ascension'); setHint(''); hud.classList.add('hidden');
+}
+
+enterButton.addEventListener('click', async () => {
+  started = true;
+  intro.classList.add('hidden'); hud.classList.remove('hidden');
+  currentPlayer = concertAle; currentKim = concertKim; setPhase('concert');
+  showChapter('MEMORY 01', 'THE ENCOUNTER', 1800);
+  setHint('ATRAVIESA LA MULTITUD · ENCUÉNTRALA');
+  audioSystem = await createAudio();
+});
+
+// ---------- UPDATES ----------
+function updateConcert(t, dt) {
+  movePlayer(dt, { x0: -8, x1: 8, z0: -0.5, z1: 15 });
+  const d = concertAle.group.position.distanceTo(concertKim.group.position);
+  proximity = smooth(1 - clamp01((d - 1.8) / 10.5));
+  proximityBar.style.transform = `scaleX(${proximity})`;
+  audioSystem?.set?.(proximity);
+
+  const touchMix = phase === 'concert_touch' ? smoother(phaseTime() / 2.9) : 0;
+  concertAle.update(t, proximity * 0.4 + touchMix * 0.35, touchMix);
+  concertKim.update(t, proximity * 0.95 + touchMix * 0.2, touchMix);
+  updateBond(t, touchMix);
+  updateCrowd(t, proximity * 0.9 + touchMix * 0.4);
+
+  crowdMat.color.lerp(new THREE.Color(proximity > 0.62 ? '#040404' : '#070606'), 0.04);
+  intimateLight.position.lerp(concertAle.group.position.clone().lerp(concertKim.g
