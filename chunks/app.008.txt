@@ -1,0 +1,81 @@
+on.x, -0.55, 0.02);
+  meadowKim.group.position.x = THREE.MathUtils.lerp(meadowKim.group.position.x, 0.55, 0.02);
+  meadowAle.group.position.z = THREE.MathUtils.lerp(meadowAle.group.position.z, -26, 0.02);
+  meadowKim.group.position.z = THREE.MathUtils.lerp(meadowKim.group.position.z, -26.3, 0.02);
+  meadowAle.group.position.y = ascendMix * 12.5;
+  meadowKim.group.position.y = ascendMix * 12.9;
+  meadowAle.update(t, 0.48 + ascendMix * 0.4, ascendMix);
+  meadowKim.update(t, 0.62 + ascendMix * 0.35, ascendMix);
+  updateInstancedRise(lavender, lavenderData, ascendMix * 8.2, 0.05, t);
+  updateInstancedRise(grass, grassData, ascendMix * 2.4, 0.02, t);
+  meadowWarm.material.opacity = 0.25 + ascendMix * 0.48;
+  meadowWarm.position.y = Math.sin(t * 0.24) * 0.2 + ascendMix * 2.5;
+  scene.background.lerp(new THREE.Color('#f4e1cf'), 0.03);
+  scene.fog.color.lerp(new THREE.Color('#f2dfc9'), 0.03);
+  scene.fog.density = 0.013 - ascendMix * 0.006;
+  meadowSun.intensity = 2.4 + ascendMix * 2.2;
+  meadowHemi.intensity = 1.4 + ascendMix * 0.9;
+  orbLight.intensity = 0;
+  if (phaseTime() > 1.2 && currentHint !== '') setHint('');
+}
+
+function updateCamera(t) {
+  if (!started) {
+    camera.position.set(Math.sin(t * 0.06) * 3.5, 13, 26);
+    camera.lookAt(0, 5.5, -14);
+    return;
+  }
+  if (phase === 'tunnel') return;
+
+  if (phase === 'concert_touch') {
+    const m = smoother(phaseTime() / 2.6);
+    const mid = concertAle.group.position.clone().lerp(concertKim.group.position, 0.5);
+    desired.set(mid.x + 3.6, 3.8, mid.z + 5.6);
+    target.set(mid.x, 1.6, mid.z);
+    camera.position.lerp(desired, 0.065); camera.lookAt(target); return;
+  }
+
+  if (phase === 'ascension') {
+    const mid = meadowAle.group.position.clone().lerp(meadowKim.group.position, 0.5);
+    desired.set(mid.x + 6.2 - ascendMix * 2.3, 5.0 + ascendMix * 7.4, mid.z + 10.4 - ascendMix * 6.0);
+    target.set(mid.x, 2.4 + ascendMix * 8.0, mid.z - 1.2);
+    camera.position.lerp(desired, 0.045);
+    camera.lookAt(target);
+    return;
+  }
+
+  const player = currentPlayer; if (!player) return;
+  const dist = phase === 'room' ? 6.4 : phase === 'meadow' ? 7.8 : 7.4;
+  const height = phase === 'room' ? 3.35 : 3.8;
+  desired.set(
+    player.group.position.x + Math.sin(cameraYaw) * dist,
+    player.group.position.y + height + Math.sin(cameraPitch) * 1.5,
+    player.group.position.z + Math.cos(cameraYaw) * dist,
+  );
+  target.set(player.group.position.x, player.group.position.y + 1.35, player.group.position.z);
+  camera.position.lerp(desired, 0.08);
+  camera.lookAt(target);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.04), t = clock.elapsedTime;
+  scenePulse = Math.sin(t * 0.9) * 0.5 + 0.5;
+  if (started) {
+    if (phase === 'concert' || phase === 'concert_touch') updateConcert(t, dt);
+    else if (phase === 'room') updateRoom(t, dt);
+    else if (phase === 'tunnel') updateTunnel(t);
+    else if (phase === 'meadow') updateMeadow(t, dt);
+    else if (phase === 'ascension') updateAscension(t);
+  }
+  updateCamera(t);
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+  renderer.setSize(innerWidth, innerHeight);
+});
