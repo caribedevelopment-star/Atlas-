@@ -1,18 +1,23 @@
-# Al.Kim.ia — Local Static Prototype (V4 rebuild)
+# Al.Kim.ia
 
-This is a static Three.js prototype for the interactive memory project **Al.Kim.ia**.
+A private cinematic interactive 3D memory built for the browser.
 
-## Current scenes
-- Memory 01 — The Encounter (concert)
-- Memory 02 — The Room
-- Temporal Tunnel
-- Memory 03 — The Meadow
-- Ascension
+Current production foundation: **V05**.
 
-## Audio hook
-If you want the prototype to try using your own private reference track, add:
+## Current sequence
+- The Encounter — abstract concert / RAWA / first contact
+- The Room — mineral architectural void
+- The Portal — real-time view into the changing meadow
+- Memory Tunnel — generative fragments of prior memories
+- The Meadow — desert → winter → rebirth → lavender
+- The Ascension — lavender disintegration and skyward movement
 
-`audio/rawayana.mp3`
+## Controls
+Desktop: WASD / arrows to move, drag to look.
+Mobile: left-side floating movement control, right-side drag to look.
 
-## Deploy
-This folder can be deployed as a static Vercel project.
+## Audio
+A private local track can be supplied at `audio/rawayana.mp3`. The public repository should not contain commercial music.
+
+## Production handoff
+Read `CODEX_HANDOFF.md` before continuing major work.
