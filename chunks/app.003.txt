@@ -1,0 +1,126 @@
+5);
+
+    const attr = this.particleGeo.attributes.position;
+    for (let i = 0; i < this.particleBase.length; i++) {
+      const b = this.particleBase[i];
+      const drift = this.reaction * 0.18 + this.meet * 0.15;
+      attr.setXYZ(
+        i,
+        b.x + Math.sin(t * 0.7 + i * 0.9) * drift,
+        b.y + Math.sin(t * 0.53 + i * 1.12) * drift * 2.0,
+        b.z + Math.cos(t * 0.64 + i * 0.66) * drift
+      );
+    }
+    attr.needsUpdate = true;
+    this.particles.rotation.y += 0.0012 + this.reaction * 0.0025;
+  }
+}
+
+// ---------- CONCERT ----------
+const concertFloor = new THREE.Mesh(
+  new THREE.CircleGeometry(28, 100),
+  new THREE.MeshStandardMaterial({ color: '#090706', roughness: 0.98, metalness: 0.03 })
+);
+concertFloor.rotation.x = -Math.PI / 2;
+concertRoot.add(concertFloor);
+
+const arenaShell = new THREE.Mesh(
+  new THREE.CylinderGeometry(31, 31, 18, 100, 1, true),
+  new THREE.MeshStandardMaterial({ color: '#020202', side: THREE.BackSide, roughness: 1 })
+);
+arenaShell.position.y = 9;
+concertRoot.add(arenaShell);
+
+for (const [r, y, color, opacity] of [[17, 4, '#672314', 0.72], [21, 6.5, '#4b170d', 0.42], [26, 9.2, '#31110c', 0.28]]) {
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(r, 0.09, 8, 160),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity })
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = y;
+  concertRoot.add(ring);
+}
+
+const stage = new THREE.Group();
+stage.position.set(0, 0.45, -18.5); concertRoot.add(stage);
+const stageBody = new THREE.Mesh(new THREE.BoxGeometry(14, 0.9, 7.5), new THREE.MeshStandardMaterial({ color: '#13100e', roughness: 0.72, metalness: 0.1 }));
+stage.add(stageBody);
+const stageBack = new THREE.Mesh(new THREE.BoxGeometry(11, 5.8, 0.5), new THREE.MeshStandardMaterial({ color: '#1a1512', roughness: 0.5, metalness: 0.08 }));
+stageBack.position.set(0, 3.2, -2.7); stage.add(stageBack);
+const sign = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 1.65), new THREE.MeshBasicMaterial({ map: textTexture('RAWA', { width: 1024, height: 256, color: '#ffb368', font: '900 170px Inter, Arial, sans-serif' }), transparent: true }));
+sign.position.set(0, 3.35, -2.38); stage.add(sign);
+const stageBars = [];
+for (let r = 0; r < 5; r++) {
+  for (let c = 0; c < 18; c++) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.16), new THREE.MeshBasicMaterial({ color: c % 3 === 0 ? '#ffcb7a' : '#ff6f21', transparent: true, opacity: 0.6 }));
+    bar.position.set(-5.4 + c * 0.64, 0.6, -2.05 + r * 1.0);
+    stage.add(bar);
+    stageBars.push(bar);
+  }
+}
+
+const concertBeams = [];
+for (let i = 0; i < 18; i++) {
+  const cone = new THREE.Mesh(
+    new THREE.ConeGeometry(0.9, 22, 18, 1, true),
+    new THREE.MeshBasicMaterial({ color: i % 2 ? '#ff6122' : '#ffbf6a', transparent: true, opacity: 0.04, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false })
+  );
+  cone.position.set((i - 8.5) * 1.6, 10.4, -16.2);
+  cone.rotation.z = (i - 8.5) * 0.04;
+  concertRoot.add(cone);
+  concertBeams.push(cone);
+}
+
+const orbRoot = new THREE.Group();
+orbRoot.position.set(0, 10.5, -16.5); concertRoot.add(orbRoot);
+const orb = new THREE.Mesh(new THREE.SphereGeometry(5.2, 72, 58), new THREE.MeshStandardMaterial({ color: '#ffe6b3', emissive: '#ff9d2e', emissiveIntensity: 18, roughness: 0.28, metalness: 0 }));
+orbRoot.add(orb);
+const orbHalos = [];
+for (const [r, o, c] of [[6.3, 0.16, '#ff9b31'], [8.1, 0.06, '#ff691f'], [10.3, 0.018, '#ffd988']]) {
+  const h = new THREE.Mesh(new THREE.SphereGeometry(r, 40, 32), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false }));
+  orbRoot.add(h); orbHalos.push(h);
+}
+const orbLight = new THREE.PointLight('#ff9a29', 1150, 88, 2); orbRoot.add(orbLight);
+
+const crowdGeo = new THREE.DodecahedronGeometry(1, 0);
+const crowdMat = new THREE.MeshStandardMaterial({ color: '#070606', roughness: 1 });
+const crowdData = [];
+for (let i = 0; i < 3100; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const r = 4.8 + Math.pow(Math.random(), 0.62) * 24;
+  const x = Math.cos(a) * r * 0.98;
+  const z = Math.sin(a) * r * 0.82 - 3.8;
+  if (z > 17 || z < -24 || Math.abs(x) > 27) continue;
+  if (Math.abs(x) < 2.9 && z > -0.5 && z < 14) continue;
+  crowdData.push({ x, z, s: 0.34 + Math.random() * 0.92, seed: Math.random() * 20, lean: (Math.random() - 0.5) * 0.22 });
+}
+const crowd = new THREE.InstancedMesh(crowdGeo, crowdMat, crowdData.length);
+crowd.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+concertRoot.add(crowd);
+const crowdDummy = new THREE.Object3D();
+function updateCrowd(t, intimacy = 0) {
+  for (let i = 0; i < crowdData.length; i++) {
+    const p = crowdData[i];
+    const beat = (Math.sin(t * 4.7 + p.seed) + 1) * 0.5;
+    const sway = Math.sin(t * 1.3 + p.seed) * 0.09 * (1 - intimacy * 0.76);
+    crowdDummy.position.set(p.x + sway, p.s * (0.56 + beat * 0.05), p.z);
+    crowdDummy.rotation.set(0, p.seed, p.lean + sway * 0.9);
+    crowdDummy.scale.set(0.34 * p.s, 2.18 * p.s * (1 + beat * 0.05), 0.34 * p.s);
+    crowdDummy.updateMatrix();
+    crowd.setMatrixAt(i, crowdDummy.matrix);
+  }
+  crowd.instanceMatrix.needsUpdate = true;
+}
+
+function ambientPoints(count, area, color, size, opacity, parent) {
+  const arr = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    arr[i * 3] = (Math.random() - 0.5) * area.x;
+    arr[i * 3 + 1] = Math.random() * area.y;
+    arr[i * 3 + 2] = (Math.random() - 0.5) * area.z;
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  const mat = new THREE.PointsMaterial({ color, size, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
+  const pts = new THREE.Points(geo, mat); parent.add(pts); return pts;
+}
+const conce
